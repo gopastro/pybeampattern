@@ -8,7 +8,7 @@ import struct
 
 class Unidex11(Gpib):
     """
-    A Gpib helper class for interfacing with the Unidex 11
+    A GPIB helper class for interfacing with the Unidex 11
     motion controller
     """
     def __init__(self, name='unidex11', pad=0, sad=0):
