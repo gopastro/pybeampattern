@@ -1,3 +1,8 @@
+"""
+Beam Pattern Controller for
+Unidex11 Motion Controller
+Gopal Narayanan <gopal@astro.umass.edu>
+"""
 #!/usr/bin/env python
 
 from myGpib import Gpib
