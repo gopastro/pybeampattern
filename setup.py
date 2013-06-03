@@ -12,4 +12,5 @@ setup(
     author_email = "gopal@astro.umass.edu",
     packages = find_packages(),
     setup_requires=['nose', 'sphinx'],
+    scripts = ['bin/run_beampattern.py',]
     )
