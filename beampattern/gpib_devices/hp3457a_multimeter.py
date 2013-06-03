@@ -54,7 +54,14 @@ class Multimeter(Gpib):
         #self.write('NRDGS 6,SYN')   #six readings ~ 1s total
         #self.write('TRIG HOLD')
 
-    def take_dc_readings(self, nrdgs=6):
+    def setup_ac(self, nplc=10, range=0.03, nrdgs=6):
+        """Setup for AC operations"""
+        for command in ('TRIG HOLD', 'FIXEDZ 1', 'ACV %s,AUTO' % range, 
+                        'NPLC %s' % nplc, 'NRDGS %d,SYN' % nrdgs):
+            self.write(command)
+            time.sleep(self.asksleep)
+
+    def take_readings(self, nrdgs=6):
         self.write('TRIG HOLD')
         time.sleep(self.asksleep)
         self.trigger()
