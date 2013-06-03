@@ -42,7 +42,7 @@ class Multimeter(Gpib):
         """Returns ID String"""
         return self.askuntil('ID?')
 
-    def setup_dc(self, nplc=10, range=0.03, nrdgs=6):
+    def setup_dc(self, nplc=10, range=10.0, nrdgs=2):
         """Setup for DC operations"""
         for command in ('TRIG HOLD', 'FIXEDZ 1', 'DCV %s,AUTO' % range, 
                         'NPLC %s' % nplc, 'NRDGS %d,SYN' % nrdgs):
@@ -54,7 +54,7 @@ class Multimeter(Gpib):
         #self.write('NRDGS 6,SYN')   #six readings ~ 1s total
         #self.write('TRIG HOLD')
 
-    def setup_ac(self, nplc=10, range=0.03, nrdgs=2):
+    def setup_ac(self, nplc=10, range=10.0, nrdgs=2):
         """Setup for AC operations
         FIXEDZ 1 only for DC
         """
