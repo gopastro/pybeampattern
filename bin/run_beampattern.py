@@ -95,8 +95,8 @@ if __name__ == '__main__':
 
     if options.home:
         uni, multi, syn = open_devices(open_multi=False, open_synth=False)
-        multi.reset()
-        multi.home('X')
+        uni.reset()
+        uni.home('X')
         print "Going Home"
         sys.exit(0)
 
