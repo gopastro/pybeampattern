@@ -64,7 +64,7 @@ if __name__ == '__main__':
                       action="store", type="float",
                       help="step size for scan in degrees")
     parser.add_option("-a", "--freq", dest="freq",
-                      action="store", type="string"
+                      action="store", type="string",
                       help="frequencies of sweep in GHz in comma-separated form")
     parser.add_option("-S", "--nosweep",
                       action="store_true", dest="no_use_synth",
