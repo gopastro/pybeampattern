@@ -5,6 +5,7 @@ from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, Be
 from beampattern.logging import logger
 import sys, os
 import time
+import numpy
 
 logger.name = __name__
 
@@ -53,6 +54,8 @@ class AzimuthMap(object):
             try:
                 self.uni = Unidex11()
                 self.uni.reset()
+                self.uni.home(axis='X')
+                logger.info("Unidex 11 available, reset and homed")
             except:
                 logger.error("Unidex11 Not available")
                 raise BeamPatternGeneralError("open_devices", "Unidex11 Not available")
@@ -76,6 +79,36 @@ class AzimuthMap(object):
             try:
                 self.syn = HP83620A()
                 self.syn.set_mult(self.synth.mult)
+                logger.info("HP83620A synthesizer available and online")
             except:
                 logger.error("HP83620A not available")
                 raise BeamPatternGeneralError("open_devices", "HP83620A not available")
+
+    def make_map(self):
+        azimuths = []
+        for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
+                              self.azimuth.xinc):
+            if x > self.azimuth.xmax:
+                x = self.azimuth.xmax
+            azimuths.append(x)
+        azimuths = numpy.array(azimuths)
+        self.uni.set_azimuth(azimuths[0], self.azimuth.xslew_vel)
+        wait = (abs(azimuths[0]-self.uni.pos_az)/self.azimuth.xslew_vel) + 2.0
+        logger.info("Sleeping for %.2f seconds while stage gets to start of map" % wait)
+        time.sleep(wait)
+
+        for az in azimuths:
+            self.uni.set_azimuth(az, self.azimuth.xmap_vel)
+            wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 2.0
+            logger.info("Sleeping for %.2f seconds while stage gets to %.1 degrees" % (wait, az))
+            time.sleep(wait)
+            for freq in self.synth.freq:
+                self.syn.set_freq(freq*1e9)
+                time.sleep(0.3)
+                vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+                logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
+
+        time.sleep(10.0)
+        self.uni.home(axis='X')
+
+                

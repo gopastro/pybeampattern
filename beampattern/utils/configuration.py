@@ -8,9 +8,12 @@ This uses python's configobj library.
 
 from configobj import ConfigObj,flatten_errors
 from validate import Validator
+from beampattern.logging import logger
 
 import os
 import types
+
+logger.name = __name__
 
 config_spec_text = """
 #beampattern general items
@@ -60,6 +63,10 @@ xmin = float(-180.0, 180.0, default=-90)
 xmax = float(-180.0, 180.0, default=90)
 # xinc: map step in degrees
 xinc = float(0.1, 180.0, default=1.0)
+# xmap_vel: map velocity in degrees/second
+xmap_vel = float(0.1, 30.0, default=2.0)
+# xslew_vel: slew velocity in degrees/second
+xslew_vel = float(0.1, 30.0, default=5.0)
 
 [elevation]
 #This object contains configuration items specific to maps
@@ -115,7 +122,7 @@ def validate_dictionary(cdic):
         errortxt = ''
         for row in res:
             errortxt += 'In Section %s, key %s has error: %s' % (row[0], row[1], row[2])
-            print "errortxt"
+            logger.error(errortxt)
         return False
     
 class Configuration:
@@ -127,6 +134,7 @@ class Configuration:
         valid = Validator()
         if not os.path.exists(self.cfg_filename):
             #no configuration file found
+            logger.info("File %s not found, so creating one from you from defaults" % self.cfg_filename)
             cfg = ConfigObj(configspec=self.cfg_spec, stringify=True, list_values=True)
             cfg.filename = self.cfg_filename
             test = cfg.validate(valid, copy=True)
@@ -134,7 +142,7 @@ class Configuration:
         self.cfg = ConfigObj(self.cfg_filename, configspec=self.cfg_spec)
         rtn = self.cfg.validate(valid, preserve_errors=True)
         if type(rtn) == types.BooleanType and rtn:
-            print "Config file validated"
+            logger.info("Config file validated")
             self.tested = True
         else:
             self.tested = False
@@ -142,7 +150,7 @@ class Configuration:
             self.errortxt = ''
             for row in res:
                 self.errortxt += 'In Section %s, key %s has error: %s' % (row[0], row[1], row[2])
-            print self.errortxt
+            logger.error(self.errortxt)
 
     def save_config(self, new_config, filename=None):
         """Writes the config file upon exiting the program"""
@@ -152,3 +160,5 @@ class Configuration:
         else:
             self.cfg.filename = filename
         self.cfg.write()
+        logger.info("Config file %s written out" % self.cfg.filename)
+
