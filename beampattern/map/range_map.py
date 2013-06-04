@@ -4,6 +4,7 @@ from beampattern.gpib_devices.hp83620a import HP83620A
 from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, BeamPatternArgumentError
 from beampattern.logging import logger
 import sys, os
+import time
 
 logger.name = __name__
 
@@ -62,6 +63,7 @@ class AzimuthMap(object):
                     logger.error("Multimeter ID not right")
                     raise BeamPatternGeneralError("open_devices", "Multimeter ID not right")
                 logger.info("HP3457A multimeter initialized")
+                time.sleep(0.5)
                 self.multi.setup_ac(nplc=self.multi.nplc,
                                     range=self.multi.range,
                                     nrdgs=self.multi.nrdgs,
