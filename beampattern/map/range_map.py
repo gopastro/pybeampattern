@@ -47,7 +47,7 @@ class AzimuthMap(object):
 
     def open_devices(self):
         self.uni = None
-        self.multi = None
+        self.multimeter = None
         self.syn = None
         if self.devices.use_unidex:
             try:
@@ -58,13 +58,13 @@ class AzimuthMap(object):
                 raise BeamPatternGeneralError("open_devices", "Unidex11 Not available")
         if self.devices.use_multi:
             try:
-                self.multi = Multimeter()
-                if self.multi.idstr != 'HP3457A':
+                self.multimeter = Multimeter()
+                if self.multimeter.idstr != 'HP3457A':
                     logger.error("Multimeter ID not right")
                     raise BeamPatternGeneralError("open_devices", "Multimeter ID not right")
                 logger.info("HP3457A multimeter initialized")
                 time.sleep(0.5)
-                self.multi.setup_ac(nplc=self.multi.nplc,
+                self.multimeter.setup_ac(nplc=self.multi.nplc,
                                     range=self.multi.range,
                                     nrdgs=self.multi.nrdgs,
                                     resolution=self.multi.resolution)
