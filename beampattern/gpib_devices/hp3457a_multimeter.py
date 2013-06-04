@@ -62,13 +62,16 @@ class Multimeter(Gpib):
         """Setup for AC operations
         FIXEDZ 1 only for DC
         """
-        
-        for command in ('TRIG HOLD', 'FIXEDZ 0', 'ACV %s,%s' % (range, resolution),
-                        'NPLC %s' % nplc, 'NRDGS %d,SYN' % nrdgs):
+        self.nrdgs = nrdgs
+        for command in ('FIXEDZ 1', 'ACV %s,%s' % (range, resolution),
+                        'NPLC %s' % nplc, 'NRDGS %d,AUTO' % nrdgs,
+                        'TRIG AUTO'):
             self.write(command)
             time.sleep(self.asksleep)
 
     def take_readings(self, nrdgs=2):
+        self.write('NRDGS %d,SYN' % nrdgs)
+        time.sleep(self.asksleep)
         self.write('TRIG HOLD')
         time.sleep(self.asksleep)
         self.trigger()
@@ -84,6 +87,10 @@ class Multimeter(Gpib):
             time.sleep(self.asksleep)
         #self.write('TRIG AUTO')
         #time.sleep(self.asksleep)
+        self.write('TRIG AUTO')
+        time.sleep(self.asksleep)        
+        self.write('NRDGS %d,AUTO' % nrdgs)
+        time.sleep(self.asksleep)        
         return volt.mean(), volt.std()
 
     
