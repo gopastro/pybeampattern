@@ -3,6 +3,9 @@
 from myGpib import Gpib
 import types
 import time
+from beampattern.logging import logger
+
+logger.name = __name__
 
 class HP83620A(Gpib):
     """A Gpib helper class for interfacing with the hp 83620a
@@ -14,6 +17,7 @@ class HP83620A(Gpib):
         time.sleep(0.2)
         self.idstr = self.idstring()
         self.mult = self.get_mult()
+        logger.debug("ID for synth : %s; Multiplier set to: %s" % (self.idstr, self.mult))
         
     def idstring(self):
         "returns ID string"
@@ -65,7 +69,7 @@ class HP83620A(Gpib):
     def get_power_level(self):
         """Get RF power level in dBm"""
         power = float(self.ask('SOUR:POW:LEVEL?'))
-        print "Power = %g dBm" % power
+        logger.debug("Power = %g dBm" % power)
         return power
 
     def set_power_level(self, power):

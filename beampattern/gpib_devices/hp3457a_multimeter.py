@@ -1,7 +1,10 @@
+from beampattern.logging import logger
 from myGpib import Gpib, GpibError
 import time
 import types
 import numpy
+
+logger.name = __name__
 
 class Multimeter(Gpib):
     """A Gpib helper class for interfacing with the HP3457A
@@ -11,6 +14,7 @@ class Multimeter(Gpib):
         Gpib.__init__(self, name=name, pad=pad, sad=sad)
         self.asksleep = asksleep
         self.idstr = self.idstring()
+        logger.debug("Multimeter Id: %s" % self.idstr)
 
     def readuntil(self, term=''):
         """Read until termination character"""
@@ -54,12 +58,12 @@ class Multimeter(Gpib):
         #self.write('NRDGS 6,SYN')   #six readings ~ 1s total
         #self.write('TRIG HOLD')
 
-    def setup_ac(self, nplc=10, range=10.0, nrdgs=2):
+    def setup_ac(self, nplc=10, range=10.0, nrdgs=2, resolution=0.001):
         """Setup for AC operations
         FIXEDZ 1 only for DC
         """
         
-        for command in ('TRIG HOLD', 'FIXEDZ 0', 'ACV %s,AUTO' % range, 
+        for command in ('TRIG HOLD', 'FIXEDZ 0', 'ACV %s,%s' % (range, resolution),
                         'NPLC %s' % nplc, 'NRDGS %d,SYN' % nrdgs):
             self.write(command)
             time.sleep(self.asksleep)
@@ -73,7 +77,7 @@ class Multimeter(Gpib):
         for i in range(nrdgs):
             try:
                 rdg = self.readuntil()
-                print i, rdg
+                logger.debug("%d, %s" % (i, rdg))
                 volt[i] = float(rdg)
             except ValueError:
                 volt[i] = 0.0

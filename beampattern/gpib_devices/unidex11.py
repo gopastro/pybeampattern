@@ -1,15 +1,20 @@
+#!/usr/bin/env python
 """
 Beam Pattern Controller for
 Unidex11 Motion Controller
 Gopal Narayanan <gopal@astro.umass.edu>
 """
-#!/usr/bin/env python
+
 
 from myGpib import Gpib
 import types
 import time
 import gpib
 import struct
+
+from beampattern.logging import logger
+
+logger.name = __name__
 
 class Unidex11(Gpib):
     """
@@ -38,7 +43,7 @@ class Unidex11(Gpib):
         Home the axis
         """
         if axis not in ('X', 'Y', 'x', 'y'):
-            print "Only X & Y axes can be homed"
+            logger.error("Only X & Y axes can be homed")
             return
         self.write('I H %s *' % axis.upper())
         if axis.upper() == 'X':
@@ -64,7 +69,7 @@ class Unidex11(Gpib):
         move the stage to the number of steps
         """
         if axis not in ('X', 'Y', 'x', 'y'):
-            print "Only X & Y axes can be moved"
+            logger.error("Only X & Y axes can be moved")
             return
         self.write('I %s F%d D%d *' % (axis.upper(), feedrate, numsteps))
         time.sleep(0.25)
@@ -75,7 +80,7 @@ class Unidex11(Gpib):
         #     if count % 4 == 0:
         #         print "Command in progress, Time = %.2f seconds" % (count*0.5)
         # time.sleep(0.5)
-        print "Position set"
+        logger.debug("Position set")
             
     def set_azimuth(self, az_command, az_vel):
         """
@@ -100,7 +105,7 @@ class Unidex11(Gpib):
         Feedrate is calculated from this el_vel
         """
         if el_command < self.limits[0] or el_command > self.limits[1]:
-            print "Exceeds range of drive"
+            logger.error("Exceeds range of drive")
             return
         numsteps = int((el_command-self.pos_el)/self.step_size_el)
         feedrate = int(abs(el_vel)/self.step_size_el)

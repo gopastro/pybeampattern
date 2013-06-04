@@ -14,7 +14,7 @@ import types
 
 config_spec_text = """
 #beampattern general items
-[dreampy]
+[general]
 #loglevel can be one of these. If loglevel is set to 20 (say)
 #then only messages with a loglevel higher than 20 will be emitted
 #default loglevel is 10
@@ -34,6 +34,8 @@ config_spec_text = """
 # consoleloglevel is for console printout
 fileloglevel  = integer(5, 50, default=10)
 consoleloglevel  = integer(5, 50, default=10)
+# comment is a long string which gets written to the output data file
+comment = string(max=100, default="BeamMap at 74 GHz")
 
 #general plot specific items
 [plot]
@@ -55,9 +57,19 @@ use_multi = boolean(default=True)
 # xmin: map start position in degrees
 xmin = float(-180.0, 180.0, default=-90)
 # xmax: map end position in degrees
-xmax = float(-180.0, 180.0, default=-90)
+xmax = float(-180.0, 180.0, default=90)
 # xinc: map step in degrees
 xinc = float(0.1, 180.0, default=1.0)
+
+[elevation]
+#This object contains configuration items specific to maps
+#in elevation
+# ymin: map start position in degrees
+ymin = float(-180.0, 180.0, default=-90)
+# ymax: map end position in degrees
+ymax = float(-180.0, 180.0, default=90)
+# yinc: map step in degrees
+yinc = float(0.1, 180.0, default=1.0)
 
 [synth]
 # This object contains configuration items specfic to
@@ -73,9 +85,13 @@ mult = float(1.0, 10, default=4.0)
 # nplc is number of power line cycles for averaging
 nplc = float(1, 20, default=10.0)
 # number of readings to average
-nrdgs = int(1, 10, default=2)
+nrdgs = integer(1, 10, default=2)
 # range of meter
 range = float(-1.0, 300, default=10.0)
+# resolution of meter: this is expressed as a percentage
+# of range. for eg. if range is 30 V and you set resolution
+# to 0.001, you will get a resolution of 0.001*30/100. = 0.0003
+resolution = float(0.000001, 99.0, default=0.001)
 """
 
 def default_config():
@@ -126,10 +142,13 @@ class Configuration:
             self.errortxt = ''
             for row in res:
                 self.errortxt += 'In Section %s, key %s has error: %s' % (row[0], row[1], row[2])
-            print "self.errortxt"
+            print self.errortxt
 
-    def save_config(self, new_config):
+    def save_config(self, new_config, filename=None):
         """Writes the config file upon exiting the program"""
         self.cfg.update(new_config)
-        self.cfg.filename = self.cfg_filename
+        if filename is None:
+            self.cfg.filename = self.cfg_filename
+        else:
+            self.cfg.filename = filename
         self.cfg.write()
