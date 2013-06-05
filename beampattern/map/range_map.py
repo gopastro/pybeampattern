@@ -100,7 +100,7 @@ class AzimuthMap(object):
         for az in azimuths:
             self.uni.set_azimuth(az, self.azimuth.xmap_vel)
             wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 2.0
-            logger.info("Sleeping for %.2f seconds while stage gets to %.1 degrees" % (wait, az))
+            logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
             time.sleep(wait)
             for freq in self.synth.freq:
                 self.syn.set_freq(freq*1e9)
