@@ -9,7 +9,7 @@ import pylab
 
 from beampattern.utils.configuration import Configuration
 from beampattern.logging import logger
-
+from beampattern.map.range_map import AzimuthMap
 logger.name = __name__
         
 if __name__ == '__main__':
@@ -38,5 +38,9 @@ if __name__ == '__main__':
         filename = base+"_"+datetime_str+ext
         logger.info("Will write output to %s" % filename)
 
+    amap = AzimuthMap(cfg.cfg, filename, datetime_str)
+    amap.open_devices()
+    amap.make_map()
+    
     sys.exit(0)
 

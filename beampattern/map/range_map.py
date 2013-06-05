@@ -54,7 +54,9 @@ class AzimuthMap(object):
             try:
                 self.uni = Unidex11()
                 self.uni.reset()
+                time.sleep(2.0)
                 self.uni.home(axis='X')
+                time.sleep(10.0)
                 logger.info("Unidex 11 available, reset and homed")
             except:
                 logger.error("Unidex11 Not available")
@@ -84,6 +86,24 @@ class AzimuthMap(object):
                 logger.error("HP83620A not available")
                 raise BeamPatternGeneralError("open_devices", "HP83620A not available")
 
+    def make_header(self):
+        hdr = ""
+        hdr += "# Beammap Timestamp: %s\n" % self.datetime_str
+        hdr += "# Comment: %s\n" % self.general.comment
+        hdr += "# use_unidex: %s; use_multi: %s; use_synth: %s\n" % \
+               (self.devices.use_unidex, self.devices.use_multi, self.devices.use_synth)
+        hdr += "# Map Azimuth Params: xmin: %.2f deg; xmax: %.2f deg; xinc: %.2f deg\n" % \
+               (self.azimuth.xmin, self.azimuth.xmax, self.azimuth.xinc)
+        hdr += "# Map Velocity: %.2f deg/s; Slew speed: %.2f deg/s\n" % \
+               (self.azimuth.xmap_vel, self.azimuth.xslew_vel)
+        hdr += "# Multimeter settings: NPLC: %s; nrdgs: %d; range: %s; res: %.5g\n" % \
+               (self.multi.nplc, self.multi.nrdgs, self.multi.range, self.multi.resolution)
+        if self.devices.use_synth:
+            hdr += "# Synthesizer Multiplier: %.1f\n" % (self.synth.mult)
+            hdr += "# Frequenies (GHz): %s\n" % (self.synth.freq)
+
+        return hdr
+
     def make_map(self):
         azimuths = []
         for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
@@ -97,18 +117,26 @@ class AzimuthMap(object):
         logger.info("Sleeping for %.2f seconds while stage gets to start of map" % wait)
         time.sleep(wait)
 
+        fp = open(filename, 'w')
+        header = self.make_header()
+        fp.write(header)
         for az in azimuths:
             self.uni.set_azimuth(az, self.azimuth.xmap_vel)
             wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 2.0
             logger.info("Sleeping for %.2f seconds while stage gets to %.1 degrees" % (wait, az))
             time.sleep(wait)
+            fp.write("%.3f\t")
             for freq in self.synth.freq:
                 self.syn.set_freq(freq*1e9)
                 time.sleep(0.3)
                 vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
-
+                fp.write("%.6g\t%.6g\t" % (vmean, vstd))
+            fp.write('\n')
+                         
         time.sleep(10.0)
         self.uni.home(axis='X')
+        logger.info("Map Completed, Saving data file")
+        fp.close()
 
                 
