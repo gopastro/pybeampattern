@@ -105,6 +105,8 @@ class AzimuthMap(object):
         return hdr
 
     def make_map(self):
+        self.uni.home(axis='X')
+        time.sleep(1.0)
         azimuths = []
         for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
                               self.azimuth.xinc):
@@ -117,7 +119,7 @@ class AzimuthMap(object):
         logger.info("Sleeping for %.2f seconds while stage gets to start of map" % wait)
         time.sleep(wait)
 
-        fp = open(filename, 'w')
+        fp = open(self.filename, 'w')
         header = self.make_header()
         fp.write(header)
         for az in azimuths:
@@ -125,7 +127,7 @@ class AzimuthMap(object):
             wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 2.0
             logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
             time.sleep(wait)
-            fp.write("%.3f\t")
+            fp.write("%.3f\t" % az)
             for freq in self.synth.freq:
                 self.syn.set_freq(freq*1e9)
                 time.sleep(0.3)
