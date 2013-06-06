@@ -23,7 +23,7 @@ class AzimuthMap(object):
     write output data to and a datetime_str, this class
     check for correct configuration and does a map
     """
-    def __init__(self, cfg, filename, datetime_str):
+    def __init__(self, cfg, filename, datetime_str, cfgfile):
         self.plot_symbols = ['o', 's', 'v', '^', '<', '>',
                              '1', '2', '3', '4', 'p', '*',
                              'h', 'H', '+', 'x', 'D', 'd']
@@ -32,6 +32,7 @@ class AzimuthMap(object):
         self._get_config_parameters()
         self.filename = filename
         self.datetime_str = datetime_str
+        self.cfgfile = cfgfile
         if not self.check_map_azimuth_parameters():
             logger.error("Map Parameters Malformed")
             raise BeamPatternGeneralError("AzimuthMap", "Map Parameters Malformed")
@@ -95,6 +96,7 @@ class AzimuthMap(object):
     def make_header(self):
         hdr = ""
         hdr += "# Beammap Timestamp: %s\n" % self.datetime_str
+        hdr += "# Configfile: %s\n" % self.cfgfile
         hdr += "# Comment: %s\n" % self.general.comment
         hdr += "# use_unidex: %s; use_multi: %s; use_synth: %s\n" % \
                (self.devices.use_unidex, self.devices.use_multi, self.devices.use_synth)
@@ -155,7 +157,7 @@ class AzimuthMap(object):
                          
         time.sleep(10.0)
         self.uni.home(axis='X')
-        logger.info("Map Completed, Saving data file")
+        logger.info("Map Completed, Saving data file %s" % self.filename)
         fp.close()
 
                 
