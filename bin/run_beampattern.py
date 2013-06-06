@@ -41,6 +41,6 @@ if __name__ == '__main__':
     amap = AzimuthMap(cfg.cfg, filename, datetime_str)
     amap.open_devices()
     amap.make_map()
-    
+    raw_input("Enter any key to quit > ")
     sys.exit(0)
 

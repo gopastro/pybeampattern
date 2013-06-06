@@ -3,6 +3,8 @@ from beampattern.gpib_devices.unidex11 import Unidex11
 from beampattern.gpib_devices.hp83620a import HP83620A
 from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, BeamPatternArgumentError
 from beampattern.logging import logger
+import matplotlib.pyplot as plt
+
 import sys, os
 import time
 import numpy
@@ -22,6 +24,10 @@ class AzimuthMap(object):
     check for correct configuration and does a map
     """
     def __init__(self, cfg, filename, datetime_str):
+        self.plot_symbols = ['o', 's', 'v', '^', '<', '>',
+                             '1', '2', '3', '4', 'p', '*',
+                             'h', 'H', '+', 'x', 'D', 'd']
+                             
         self.cfg = cfg
         self._get_config_parameters()
         self.filename = filename
@@ -55,8 +61,8 @@ class AzimuthMap(object):
                 self.uni = Unidex11()
                 self.uni.reset()
                 time.sleep(2.0)
-                self.uni.home(axis='X')
-                time.sleep(10.0)
+                #self.uni.home(axis='X')
+                #time.sleep(10.0)
                 logger.info("Unidex 11 available, reset and homed")
             except:
                 logger.error("Unidex11 Not available")
@@ -110,7 +116,7 @@ class AzimuthMap(object):
 
     def make_map(self):
         self.uni.home(axis='X')
-        time.sleep(1.0)
+        time.sleep(10.0)
         azimuths = []
         for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
                               self.azimuth.xinc):
@@ -118,26 +124,33 @@ class AzimuthMap(object):
                 x = self.azimuth.xmax
             azimuths.append(x)
         azimuths = numpy.array(azimuths)
-        self.uni.set_azimuth(azimuths[0], self.azimuth.xslew_vel)
         wait = (abs(azimuths[0]-self.uni.pos_az)/self.azimuth.xslew_vel) + 2.0
+        self.uni.set_azimuth(azimuths[0], self.azimuth.xslew_vel)
         logger.info("Sleeping for %.2f seconds while stage gets to start of map" % wait)
         time.sleep(wait)
 
         fp = open(self.filename, 'w')
         header = self.make_header()
         fp.write(header)
+        plt.ion()
+        plt.plot([self.azimuth.xmin, self.azimuth.xmax], [0, 0], 'r-')
+        plt.xlim(self.azimuth.xmin, self.azimuth.xmax)
+        plt.ylim(-0.5, 10.0)
+        plt.draw()
         for az in azimuths:
-            self.uni.set_azimuth(az, self.azimuth.xmap_vel)
             wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 2.0
+            self.uni.set_azimuth(az, self.azimuth.xmap_vel)
             logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
             time.sleep(wait)
             fp.write("%.3f" % az)
-            for freq in self.synth.freq:
+            for i, freq in enumerate(self.synth.freq):
                 self.syn.set_freq(freq*1e9)
                 time.sleep(0.3)
                 vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
                 fp.write(",%.6g,%.6g" % (vmean, vstd))
+                plt.plot(az, vmean, self.plot_symbols[i])
+                plt.draw()
             fp.write('\n')
                          
         time.sleep(10.0)
