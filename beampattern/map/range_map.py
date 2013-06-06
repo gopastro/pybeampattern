@@ -101,7 +101,11 @@ class AzimuthMap(object):
         if self.devices.use_synth:
             hdr += "# Synthesizer Multiplier: %.1f\n" % (self.synth.mult)
             hdr += "# Frequenies (GHz): %s\n" % (self.synth.freq)
-
+            hdr += "# Data columns:\n"
+            hdr += "# Az"
+            for freq in self.synth.freq:
+                hdr += ",f%.1fGHz,f%.1fGHz std" % (freq, freq)
+            hdr += "\n"
         return hdr
 
     def make_map(self):
@@ -127,13 +131,13 @@ class AzimuthMap(object):
             wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 2.0
             logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
             time.sleep(wait)
-            fp.write("%.3f\t" % az)
+            fp.write("%.3f" % az)
             for freq in self.synth.freq:
                 self.syn.set_freq(freq*1e9)
                 time.sleep(0.3)
                 vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
-                fp.write("%.6g\t%.6g\t" % (vmean, vstd))
+                fp.write(",%.6g,%.6g" % (vmean, vstd))
             fp.write('\n')
                          
         time.sleep(10.0)
