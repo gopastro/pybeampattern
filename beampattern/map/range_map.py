@@ -88,6 +88,9 @@ class AzimuthMap(object):
             try:
                 self.syn = HP83620A()
                 self.syn.set_mult(self.synth.mult)
+                time.sleep(0.2)
+                logger.info("HP83620A synthesizer pulse mod setup")
+                self.syn.setup_pulse()
                 logger.info("HP83620A synthesizer available and online")
             except:
                 logger.error("HP83620A not available")
