@@ -24,6 +24,8 @@ if __name__ == '__main__':
                       dest="filename", default="beamscan.txt",
                       help="Ascii Filename to store data into")
 
+    datetime_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
     (options, args) = parser.parse_args()
 
     if options.configfile:
@@ -32,18 +34,17 @@ if __name__ == '__main__':
         else:
             logger.info("Will create configuration file %s from defaults" % options.configfile)
         cfg = Configuration(options.configfile)
+        base, ext = os.path.splitext(options.configfile)
         cfgfile = base + "_" + datetime_str + ext
         cfg.save_config(cfg.cfg, cfgfile)
     if options.filename:
         base, ext = os.path.splitext(options.filename)        
-        datetime_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = base+"_"+datetime_str+ext
+        filename = base + "_" + datetime_str + ext
         logger.info("Will write output to %s" % filename)
 
     amap = AzimuthMap(cfg.cfg, filename, datetime_str, cfgfile)
     amap.open_devices()
     amap.make_map()
-    base, ext = os.path.splitext(options.configfile)
     raw_input("Enter any key to quit > ")
     sys.exit(0)
 
