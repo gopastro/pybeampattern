@@ -1,0 +1,62 @@
+#!/usr/bin/python
+
+from optparse import OptionParser
+import sys, os
+import numpy
+import time
+import datetime
+import pylab
+
+from beampattern.utils.plots import BeamPlot
+from beampattern.logging import logger
+logger.name = __name__
+        
+if __name__ == '__main__':
+    usage = "usage: %prog [options]"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-m", "--nomarkers",
+                      action="store_true", 
+                      dest="nomarkers", default=False,                     
+                      help="Suppress data markers")
+    parser.add_option("-g", "--nogrid",
+                      action="store_true", 
+                      dest="nogrid", default=False,                     
+                      help="Suppress grid")
+    parser.add_option("-l", "--linear",
+                      action="store_true",
+                      dest="linear", default=True,
+                      help="make a linear plot of beam-pattern")
+    parser.add_option("-L", "--log",
+                      action="store_false",
+                      dest="linear", 
+                      help="make a linear plot of beam-pattern")    
+    parser.add_option("-p", "--plotfile",
+                      action="store", type="string",
+                      dest="plotfile", default="beamplot.png",
+                      help="Output plot file")
+    parser.add_option("-f", "--filename",
+                      action="store", type="string",
+                      dest="filename", 
+                      help="Filename of data to plot")
+
+    (options, args) = parser.parse_args()
+    if not options.filename:
+        parser.print_help()
+        parser.error("Required filename option not given")
+    if options.nogrid:
+        grid = False
+    else:
+        grid = True
+    if options.nomarkers:
+        markers = False
+    else:
+        markers = True
+    bplot = BeamPlot(options.filename, markers=markers,
+                     grid=grid, plotfile=options.plotfile)
+    if options.linear:
+        bplot.plot_linear()
+    else:
+        bplot.plot_log()
+    raw_input("Enter any key to quit > ")
+    sys.exit(0)
+
