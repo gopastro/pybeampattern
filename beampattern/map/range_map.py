@@ -126,7 +126,7 @@ class AzimuthMap(object):
                 x = self.azimuth.xmax
             azimuths.append(x)
         azimuths = numpy.array(azimuths)
-        wait = (abs(azimuths[0]-self.uni.pos_az)/self.azimuth.xslew_vel) + 2.0
+        wait = (abs(azimuths[0]-self.uni.pos_az)/self.azimuth.xslew_vel) + 1.0
         self.uni.set_azimuth(azimuths[0], self.azimuth.xslew_vel)
         logger.info("Sleeping for %.2f seconds while stage gets to start of map" % wait)
         time.sleep(wait)
@@ -140,7 +140,7 @@ class AzimuthMap(object):
         plt.ylim(-0.5, 10.0)
         plt.draw()
         for az in azimuths:
-            wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 2.0
+            wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 1.0
             self.uni.set_azimuth(az, self.azimuth.xmap_vel)
             logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
             time.sleep(wait)
