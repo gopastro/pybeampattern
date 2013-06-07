@@ -18,7 +18,7 @@ class HP83620A(Gpib):
         self.idstr = self.idstring()
         self.mult = self.get_mult()
         logger.debug("ID for synth : %s; Multiplier set to: %s" % (self.idstr, self.mult))
-        
+    
     def idstring(self):
         "returns ID string"
         return "%s" % self.ask('*IDN?')
@@ -75,5 +75,19 @@ class HP83620A(Gpib):
     def set_power_level(self, power):
         """Set RF power level in dBm"""
         self.write('SOUR:POW:LEVEL %s' % power)
+
+    def setup_pulse(self):
+        """
+        These values are specific to beam pattern
+        measurements
+        """
+        self.write('PULS:SOURCE INT') #set to internal pulse source
+        time.sleep(0.1)
+        self.write('PULS:STATE ON')   #turn on
+        time.sleep(0.1)
+        self.write('PULM:INT:PER 1 MS')  #set the internal period to 1ms
+                                        #so that tuned amp can lock in at 1kHz
+        time.sleep(0.1)
+        self.write('PULM:INT:WIDTH 500 US')
 
         
