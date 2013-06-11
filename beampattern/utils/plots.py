@@ -66,13 +66,13 @@ class BeamPlot(object):
         if frequencies is None:
             frequencies = self.cfg['synth']['freq']
             
-        if not linear:
-            vmax = -10000.
-            for i, freq in enumerate(frequencies):
-                if freq in self.cfg['synth']['freq']:
-                    find = self.cfg['synth']['freq'].index(freq)*2 + 1
-                    cmax = self.data[:, find].max()
-                    vmax = cmax if cmax > vmax else vmax
+        # if not linear:
+        #     vmax = -10000.
+        #     for i, freq in enumerate(frequencies):
+        #         if freq in self.cfg['synth']['freq']:
+        #             find = self.cfg['synth']['freq'].index(freq)*2 + 1
+        #             cmax = self.data[:, find].max()
+        #             vmax = cmax if cmax > vmax else vmax
         for i, freq in enumerate(frequencies):
             if freq in self.cfg['synth']['freq']:
                 find = self.cfg['synth']['freq'].index(freq)*2 + 1
@@ -81,7 +81,7 @@ class BeamPlot(object):
                 if linear:
                     ydata = self.data[:, find]
                 else:
-                    ydata = 10.0 * numpy.log10(self.data[:, find]/vmax)
+                    ydata = 10.0 * numpy.log10(self.data[:, find]/self.data[:, find].max())
                 if self.markers:
                     plt.plot(self.data[:, 0], ydata,
                              linestyle=self.linestyles[lind],

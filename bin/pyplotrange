@@ -29,7 +29,11 @@ if __name__ == '__main__':
     parser.add_option("-L", "--log",
                       action="store_false",
                       dest="linear", 
-                      help="make a linear plot of beam-pattern")    
+                      help="make a linear plot of beam-pattern")
+    parser.add_option("-F", "--frequencies",
+                      action="store", type="string",
+                      dest="frequencies",
+                      help="Comma separated list of frequencies to plot. Freq in GHz. If not set, will use all frequencies in the data file")
     parser.add_option("-p", "--plotfile",
                       action="store", type="string",
                       dest="plotfile", default="beamplot.png",
@@ -51,12 +55,20 @@ if __name__ == '__main__':
         markers = False
     else:
         markers = True
+    frequencies = None
+    if options.frequencies:
+        try:
+            frequencies = map(float, options.frequencies.split(','))
+        except:
+            logger.error("Cannot parse frequency option. Will use all frequencies")
+            frequencies = None
+            
     bplot = BeamPlot(options.filename, markers=markers,
                      grid=grid, plotfile=options.plotfile)
     if options.linear:
-        bplot.plot_linear()
+        bplot.plot_linear(frequencies)
     else:
-        bplot.plot_log()
+        bplot.plot_log(frequencies)
     raw_input("Enter any key to quit > ")
     sys.exit(0)
 
