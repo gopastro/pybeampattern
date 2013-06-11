@@ -96,7 +96,88 @@ class AzimuthMap(object):
                 logger.error("HP83620A not available")
                 raise BeamPatternGeneralError("open_devices", "HP83620A not available")
 
-    def make_header(self):
+    def _increase_power_level(self, plevel, vmin, vmax):
+        iterate = True
+        new_power = plevel
+        while iterate:
+            new_power += 1
+            if new_power > 13:
+                logger.error("Power level exceeded. Setting it to 13 dBm")
+                return (13)
+            self.syn.set_power_level(new_power)
+            time.sleep(0.2)
+            vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+            if vmean > vmin:
+                if vmean < vmax:
+                    #success
+                    return new_power
+                else:
+                    new_power -= 0.5
+                    self.syn.set_power_level(new_power)
+                    time.sleep(0.2)
+                    vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+                    logger.info("Current voltage is: %s" % vmean)
+                    return new_power
+            else:
+                iterate = True
+
+    def _decrease_power_level(self, plevel, vmin, vmax):
+        iterate = True
+        new_power = plevel
+        while iterate:
+            new_power -= 1
+            if new_power < -5:
+                logger.error("Power level too low. Setting it to -5 dBm")
+                return (-5)
+            self.syn.set_power_level(new_power)
+            time.sleep(0.2)
+            vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+            if vmean < vmax:
+                if vmean > vmin:
+                    #success
+                    return new_power
+                else:
+                    new_power += 0.5
+                    self.syn.set_power_level(new_power)
+                    time.sleep(0.2)
+                    vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+                    logger.info("Current voltage is: %s" % vmean)
+                    return new_power
+            else:
+                iterate = True
+
+    def check_boresight_power(self, vmin=6.0, vmax=7.0):
+        """
+        Adjust boresight rf power level so that the
+        read voltage is between vmin and vmax, and store
+        the power levels in an array
+        """
+        logger.info("Go to home position")
+        self.uni.home(axis='X')
+        logger.info("Waiting 10 seconds to be sure")
+        time.sleep(10.0)
+        self.rfpower = []
+        for freq in self.synth.freq:
+            self.syn.set_freq(freq*1e9)
+            time.sleep(0.3)
+            plevel = self.syn.get_power_level()
+            vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+            if vmean >= vmin and vmean <= vmax:
+                self.rfpower.append(plevel)
+            else:
+                if vmean < vmin:
+                    #too little power
+                    plevel = self._increase_power_level(plevel, vmin, vmax)
+                    self.rfpower.append(plevel)
+                else:
+                    #too much power
+                    plevel = self._decrease_power_level(plevel, vmin, vmax)
+                    self.rfpower.append(plevel)
+            logger.info("For freq = %s GHz, power level needed is %s dBm" % (freq, plevel))
+        logger.info("Done checking boresight power")
+        
+    
+    def make_header(self, adjust_boresight=False):
         hdr = ""
         hdr += "# Beammap Timestamp: %s\n" % self.datetime_str
         hdr += "# Configfile: %s\n" % self.cfgfile
@@ -112,6 +193,11 @@ class AzimuthMap(object):
         if self.devices.use_synth:
             hdr += "# Synthesizer Multiplier: %.1f\n" % (self.synth.mult)
             hdr += "# Frequenies (GHz): %s\n" % (self.synth.freq)
+            if adjust_boresight:
+                hdr += "# Adjusted boresight power levels: "
+                for i, freq in enumerate(self.synth.freq):
+                    hdr += "f:%s GHz P:% dBm " % (freq, self.rfpower[i])
+                hdr += "\n"
             hdr += "# Data columns:\n"
             hdr += "# Az"
             for freq in self.synth.freq:
@@ -119,7 +205,9 @@ class AzimuthMap(object):
             hdr += "\n"
         return hdr
 
-    def make_map(self):
+    def make_map(self, adjust_boresight=False):
+        if adjust_boresight:
+            self.check_boresight_power()
         self.uni.home(axis='X')
         time.sleep(10.0)
         azimuths = []
@@ -135,7 +223,7 @@ class AzimuthMap(object):
         time.sleep(wait)
 
         fp = open(self.filename, 'w')
-        header = self.make_header()
+        header = self.make_header(adjust_boresight=adjust_boresight)
         fp.write(header)
         plt.ion()
         plt.plot([self.azimuth.xmin, self.azimuth.xmax], [0, 0], 'r-')
@@ -150,7 +238,11 @@ class AzimuthMap(object):
             fp.write("%.3f" % az)
             for i, freq in enumerate(self.synth.freq):
                 self.syn.set_freq(freq*1e9)
-                time.sleep(0.3)
+                time.sleep(0.1)
+                if adjust_boresight:
+                    self.syn.set_power_level(self.rfpower[i])
+                    logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, rfpower[i]))
+                time.sleep(0.2)
                 vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
                 fp.write(",%.6g,%.6g" % (vmean, vstd))
