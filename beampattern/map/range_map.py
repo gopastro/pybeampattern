@@ -241,7 +241,7 @@ class AzimuthMap(object):
                 time.sleep(0.1)
                 if adjust_boresight:
                     self.syn.set_power_level(self.rfpower[i])
-                    logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, rfpower[i]))
+                    logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, self.rfpower[i]))
                 time.sleep(0.2)
                 vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
