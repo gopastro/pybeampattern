@@ -33,6 +33,8 @@ class AzimuthMap(object):
         self.filename = filename
         self.datetime_str = datetime_str
         self.cfgfile = cfgfile
+        self.offset = 0.0
+        self.offset_std = 0.0
         if not self.check_map_azimuth_parameters():
             logger.error("Map Parameters Malformed")
             raise BeamPatternGeneralError("AzimuthMap", "Map Parameters Malformed")
@@ -152,10 +154,12 @@ class AzimuthMap(object):
         read voltage is between vmin and vmax, and store
         the power levels in an array
         """
-        logger.info("Go to home position")
-        self.uni.home(axis='X')
-        logger.info("Waiting 10 seconds to be sure")
-        time.sleep(10.0)
+        if self.offset != 0.0:
+            #not already at home
+            logger.info("Go to home position")
+            self.uni.home(axis='X')
+            logger.info("Waiting 10 seconds to be sure")
+            time.sleep(10.0)
         self.rfpower = []
         for freq in self.synth.freq:
             self.syn.set_freq(freq*1e9)
@@ -176,7 +180,25 @@ class AzimuthMap(object):
             logger.info("For freq = %s GHz, power level needed is %s dBm" % (freq, plevel))
         logger.info("Done checking boresight power")
         
-    
+    def measure_offset(self):
+        """
+        Measures the zero-point offset of the meter
+        """
+        logger.info("Go to home position")
+        self.uni.home(axis='X')
+        logger.info("Waiting 10 seconds to be sure")
+        time.sleep(10.0)
+        logger.info("Measuring zero point offset, turning off source")
+        self.syn.output_off()
+        time.sleep(0.3)
+        vmean, vstd = self.multimeter.take_readings(nrdgs=5)
+        self.offset = vmean
+        self.offset_std = vstd
+        logger.info("Measured offset of the voltmeter as: %s" % self.offset)
+        self.syn.output_on()
+        logger.info("Turning synth source back on")
+        time.sleep(0.3)
+        
     def make_header(self, adjust_boresight=False):
         hdr = ""
         hdr += "# Beammap Timestamp: %s\n" % self.datetime_str
@@ -190,6 +212,7 @@ class AzimuthMap(object):
                (self.azimuth.xmap_vel, self.azimuth.xslew_vel)
         hdr += "# Multimeter settings: NPLC: %s; nrdgs: %d; range: %s; res: %.5g\n" % \
                (self.multi.nplc, self.multi.nrdgs, self.multi.range, self.multi.resolution)
+        hdr += "# Multimeter offset: %.5g +/- %.5g\n" % (self.offset, self.offset_std)
         if self.devices.use_synth:
             hdr += "# Synthesizer Multiplier: %.1f\n" % (self.synth.mult)
             hdr += "# Frequenies (GHz): %s\n" % (self.synth.freq)
@@ -205,9 +228,11 @@ class AzimuthMap(object):
             hdr += "\n"
         return hdr
 
-    def make_map(self, adjust_boresight=False):
+    def make_map(self, adjust_boresight=False, measure_ac_offset=True):
+        if measure_ac_offset:
+            self.measure_offset()
         if adjust_boresight:
-            self.check_boresight_power()
+            self.check_boresight_power()            
         self.uni.home(axis='X')
         time.sleep(10.0)
         azimuths = []
@@ -245,7 +270,7 @@ class AzimuthMap(object):
                 time.sleep(0.2)
                 vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
-                fp.write(",%.6g,%.6g" % (vmean, vstd))
+                fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
                 plt.plot(az, vmean, self.plot_symbols[i])
                 plt.draw()
             fp.write('\n')

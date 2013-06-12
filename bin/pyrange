@@ -23,6 +23,10 @@ if __name__ == '__main__':
                       action="store_true", dest="adjust",
                       default=False,
                       help="Do boresight power level adjustment at each frequency? (default %default)")
+    parser.add_option("-o", "--offset",
+                      action="store_true", dest="offset",
+                      default=True,
+                      help="Measure offset with source off at beginning? (default %default)")
     parser.add_option("-f", "--filename",
                       action="store", type="string",
                       dest="filename", default="beamscan.txt",
@@ -48,7 +52,7 @@ if __name__ == '__main__':
 
     amap = AzimuthMap(cfg.cfg, filename, datetime_str, cfgfile)
     amap.open_devices()
-    amap.make_map(adjust_boresight=options.adjust)
+    amap.make_map(adjust_boresight=options.adjust, measure_ac_offset=options.offset)
     raw_input("Enter any key to quit > ")
     sys.exit(0)
 
