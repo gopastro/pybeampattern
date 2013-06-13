@@ -51,8 +51,10 @@ figsize = int_list(min=2, max=2, default=list(800, 600))
 use_unidex = boolean(default=True)
 # use the synthesizer?
 use_synth = boolean(default=True)
-# use the multimeter?
+# use the HP3457 multimeter?
 use_multi = boolean(default=True)
+# use the Fluke287 USB serial port based meter (faster readout)
+use_fluke = boolean(default=False)
 
 [azimuth]
 #This object contains configuration items specific to maps
@@ -99,6 +101,13 @@ range = float(-1.0, 300, default=10.0)
 # of range. for eg. if range is 30 V and you set resolution
 # to 0.001, you will get a resolution of 0.001*30/100. = 0.0003
 resolution = float(0.000001, 99.0, default=0.001)
+
+[fluke]
+# This object contains configuration items specific
+# to read out of fluke
+device = string(max=50, default='/dev/ttyUSB0')
+# number of readings to average
+nrdgs = integer(1, 10, default=2)
 """
 
 def default_config():

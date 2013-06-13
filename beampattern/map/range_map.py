@@ -1,6 +1,7 @@
 from beampattern.gpib_devices.hp3457a_multimeter import Multimeter
 from beampattern.gpib_devices.unidex11 import Unidex11
 from beampattern.gpib_devices.hp83620a import HP83620A
+from beampattern.serial import Fluke
 from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, BeamPatternArgumentError
 from beampattern.logging import logger
 import matplotlib.pyplot as plt
@@ -35,6 +36,7 @@ class AzimuthMap(object):
         self.cfgfile = cfgfile
         self.offset = 0.0
         self.offset_std = 0.0
+        self.nrdgs = 0
         if not self.check_map_azimuth_parameters():
             logger.error("Map Parameters Malformed")
             raise BeamPatternGeneralError("AzimuthMap", "Map Parameters Malformed")
@@ -59,6 +61,7 @@ class AzimuthMap(object):
         self.uni = None
         self.multimeter = None
         self.syn = None
+        self.fluke = None
         if self.devices.use_unidex:
             try:
                 self.uni = Unidex11()
@@ -82,10 +85,11 @@ class AzimuthMap(object):
                                     range=self.multi.range,
                                     nrdgs=self.multi.nrdgs,
                                     resolution=self.multi.resolution)
+                self.nrdgs = self.multi.nrdgs
             except:
                 logger.error("Multimeter not available")
                 raise BeamPatternGeneralError("open_devices", "Multimeter not available")
-
+        
         if self.devices.use_synth:
             try:
                 self.syn = HP83620A()
@@ -98,6 +102,29 @@ class AzimuthMap(object):
                 logger.error("HP83620A not available")
                 raise BeamPatternGeneralError("open_devices", "HP83620A not available")
 
+        if self.devices.use_fluke:
+            try:
+                self.fluke = Fluke()
+                logger.info("Fluke is online")
+                self.nrdgs = self.fluke.nrdgs
+            except:
+                logger.error("Fluke 287 is not available")
+                raise BeamPatternGeneralError("open_devices", "Fluke 287 not available")
+
+    def take_readings(self, nrdgs=2):
+        if self.devices.use_multi:
+            try:
+                vmean, vstd = self.multimeter.take_readings(nrdgs=nrdgs)
+                return vmean, vstd
+            except:
+                raise BeamPatternGeneralError("take_readings", "Cannot read HP voltmeter")
+        else:
+            try:
+                vmean, vstd = self.fluke.measure(nrdgs=nrdgs)
+                return vmean, vstd
+            except:
+                raise BeamPatternGeneralError("take_readings", "Cannot read Fluke voltmeter")
+            
     def _increase_power_level(self, plevel, vmin, vmax):
         iterate = True
         new_power = plevel
@@ -108,7 +135,8 @@ class AzimuthMap(object):
                 return (13)
             self.syn.set_power_level(new_power)
             time.sleep(0.2)
-            vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+            #vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+            vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
             if vmean > vmin:
                 if vmean < vmax:
                     #success
@@ -117,7 +145,8 @@ class AzimuthMap(object):
                     new_power -= 0.5
                     self.syn.set_power_level(new_power)
                     time.sleep(0.2)
-                    vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+                    #vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+                    vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
                     logger.info("Current voltage is: %s" % vmean)
                     return new_power
             else:
@@ -133,7 +162,7 @@ class AzimuthMap(object):
                 return (-5)
             self.syn.set_power_level(new_power)
             time.sleep(0.2)
-            vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+            vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
             if vmean < vmax:
                 if vmean > vmin:
                     #success
@@ -142,7 +171,7 @@ class AzimuthMap(object):
                     new_power += 0.5
                     self.syn.set_power_level(new_power)
                     time.sleep(0.2)
-                    vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+                    vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
                     logger.info("Current voltage is: %s" % vmean)
                     return new_power
             else:
@@ -165,7 +194,7 @@ class AzimuthMap(object):
             self.syn.set_freq(freq*1e9)
             time.sleep(0.3)
             plevel = self.syn.get_power_level()
-            vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+            vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
             if vmean >= vmin and vmean <= vmax:
                 self.rfpower.append(plevel)
             else:
@@ -191,7 +220,7 @@ class AzimuthMap(object):
         logger.info("Measuring zero point offset, turning off source")
         self.syn.output_off()
         time.sleep(0.3)
-        vmean, vstd = self.multimeter.take_readings(nrdgs=5)
+        vmean, vstd = self.take_readings(nrdgs=5)
         self.offset = vmean
         self.offset_std = vstd
         logger.info("Measured offset of the voltmeter as: %s" % self.offset)
@@ -212,7 +241,10 @@ class AzimuthMap(object):
                (self.azimuth.xmap_vel, self.azimuth.xslew_vel)
         hdr += "# Multimeter settings: NPLC: %s; nrdgs: %d; range: %s; res: %.5g\n" % \
                (self.multi.nplc, self.multi.nrdgs, self.multi.range, self.multi.resolution)
-        hdr += "# Multimeter offset: %.5g +/- %.5g\n" % (self.offset, self.offset_std)
+        if self.devices.use_fluke:
+            hdr += "# Fluke device: %s; nrdgs: %d\n" % \
+                   (self.fluke.device, self.fluke.nrdgs)
+        hdr += "# Voltage offset: %.5g +/- %.5g\n" % (self.offset, self.offset_std)
         if self.devices.use_synth:
             hdr += "# Synthesizer Multiplier: %.1f\n" % (self.synth.mult)
             hdr += "# Frequenies (GHz): %s\n" % (self.synth.freq)
@@ -268,7 +300,7 @@ class AzimuthMap(object):
                     self.syn.set_power_level(self.rfpower[i])
                     logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, self.rfpower[i]))
                 time.sleep(0.2)
-                vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
+                vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
                 fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
                 plt.plot(az, vmean, self.plot_symbols[i])
