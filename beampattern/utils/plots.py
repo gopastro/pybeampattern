@@ -61,7 +61,9 @@ class BeamPlot(object):
         fp.close()
         return header
     
-    def _plot_data(self, frequencies=None, linear=True):
+    def _plot_data(self, frequencies=None, linear=True,
+                   ylim=None, xlim=None, title=None):
+        print title
         plt.ion()
         if frequencies is None:
             frequencies = self.cfg['synth']['freq']
@@ -92,11 +94,22 @@ class BeamPlot(object):
                     plt.plot(self.data[:, 0], ydata,
                              linestyle=self.linestyles[lind],
                              label='%.1f GHz' % freq)
-        plt.xlim(self.cfg['azimuth']['xmin'], self.cfg['azimuth']['xmax'])
+        if xlim is None:
+            plt.xlim(self.cfg['azimuth']['xmin'], self.cfg['azimuth']['xmax'])
+        else:
+            plt.xlim(xlim[0], xlim[1])
+        if ylim is not None:
+            plt.ylim(ylim[0], ylim[1])
         plt.xlabel('Azimuth (deg)')
-        plt.ylabel('Beam Voltage (linear)')
+        if linear:
+            plt.ylabel('Beam Voltage (linear)')
+        else:
+            plt.ylabel('Beam Voltage (log)')
         plt.legend(loc='best')
-        plt.title('%s; %s' % (self.comment, self.datetime_str))
+        if title is None:
+            plt.title('%s; %s' % (self.comment, self.datetime_str))
+        else:
+            plt.title(title)
         if self.grid:
             plt.grid(True)
         plt.draw()
@@ -104,14 +117,18 @@ class BeamPlot(object):
         if self.plotfile is not None:
             plt.savefig(self.plotfile)
 
-    def plot_linear(self, frequencies=None):
+    def plot_linear(self, frequencies=None, xlim=None,
+                    ylim=None, title=None):
         self._plot_data(frequencies=frequencies,
-                        linear=True)
+                        linear=True, xlim=xlim, ylim=ylim,
+                        title=title)
         
 
-    def plot_log(self, frequencies=None):
+    def plot_log(self, frequencies=None, xlim=None,
+                    ylim=None, title=None):
         self._plot_data(frequencies=frequencies,
-                        linear=False)
+                        linear=False, xlim=xlim, ylim=ylim,
+                        title=title)
 
 
 
