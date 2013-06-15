@@ -1,6 +1,7 @@
-from beampattern.gpib_devices.hp3457a_multimeter import Multimeter
+#from beampattern.gpib_devices.hp3457a_multimeter import Multimeter
 from beampattern.gpib_devices.unidex11 import Unidex11
 from beampattern.gpib_devices.hp83620a import HP83620A
+from beampattern.gpib_devices.hp3478a_multimeter import Multimeter
 from beampattern.serial import Fluke
 from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, BeamPatternArgumentError
 from beampattern.logging import logger
@@ -36,7 +37,7 @@ class AzimuthMap(object):
         self.cfgfile = cfgfile
         self.offset = 0.0
         self.offset_std = 0.0
-        self.nrdgs = 0
+        self.nrdgs = 1
         if not self.check_map_azimuth_parameters():
             logger.error("Map Parameters Malformed")
             raise BeamPatternGeneralError("AzimuthMap", "Map Parameters Malformed")
@@ -61,7 +62,7 @@ class AzimuthMap(object):
         self.uni = None
         self.multimeter = None
         self.syn = None
-        self.fluke = None
+        self.flukemeter = None
         if self.devices.use_unidex:
             try:
                 self.uni = Unidex11()
@@ -76,15 +77,15 @@ class AzimuthMap(object):
         if self.devices.use_multi:
             try:
                 self.multimeter = Multimeter()
-                if self.multimeter.idstr != 'HP3457A':
-                    logger.error("Multimeter ID not right")
-                    raise BeamPatternGeneralError("open_devices", "Multimeter ID not right")
-                logger.info("HP3457A multimeter initialized")
+                #if self.multimeter.idstr != 'HP3457A':
+                #    logger.error("Multimeter ID not right")
+                #    raise BeamPatternGeneralError("open_devices", "Multimeter ID not right")
+                logger.info("HP3478A multimeter initialized")
                 time.sleep(0.5)
                 self.multimeter.setup_ac(nplc=self.multi.nplc,
-                                    range=self.multi.range,
-                                    nrdgs=self.multi.nrdgs,
-                                    resolution=self.multi.resolution)
+                                         range=self.multi.range,
+                                         nrdgs=self.multi.nrdgs,
+                                         resolution=self.multi.resolution)
                 self.nrdgs = self.multi.nrdgs
             except:
                 logger.error("Multimeter not available")
@@ -104,11 +105,12 @@ class AzimuthMap(object):
 
         if self.devices.use_fluke:
             try:
-                self.fluke = Fluke()
+                self.flukemeter = Fluke()
                 logger.info("Fluke is online")
+                time.sleep(0.5)
                 self.nrdgs = self.fluke.nrdgs
             except:
-                logger.error("Fluke 287 is not available")
+                logger.error("Fluke 287 is not available. Error: %s" % sys.exc_info())
                 raise BeamPatternGeneralError("open_devices", "Fluke 287 not available")
 
     def take_readings(self, nrdgs=2):
@@ -120,7 +122,7 @@ class AzimuthMap(object):
                 raise BeamPatternGeneralError("take_readings", "Cannot read HP voltmeter")
         else:
             try:
-                vmean, vstd = self.fluke.measure(nrdgs=nrdgs)
+                vmean, vstd = self.flukemeter.measure(nrdgs=nrdgs)
                 return vmean, vstd
             except:
                 raise BeamPatternGeneralError("take_readings", "Cannot read Fluke voltmeter")
@@ -194,6 +196,7 @@ class AzimuthMap(object):
             self.syn.set_freq(freq*1e9)
             time.sleep(0.3)
             plevel = self.syn.get_power_level()
+            time.sleep(2.0)
             vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
             if vmean >= vmin and vmean <= vmax:
                 self.rfpower.append(plevel)
@@ -219,7 +222,7 @@ class AzimuthMap(object):
         time.sleep(10.0)
         logger.info("Measuring zero point offset, turning off source")
         self.syn.output_off()
-        time.sleep(0.3)
+        time.sleep(3.0)
         vmean, vstd = self.take_readings(nrdgs=5)
         self.offset = vmean
         self.offset_std = vstd

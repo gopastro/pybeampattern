@@ -52,7 +52,7 @@ class HP83620A(Gpib):
         
     def output_status(self):
         """returns output status of RF signal"""
-        op = int(self.ask("OUTPUT:STATE?"))
+        op = int(self.ask("POWER:STATE?"))
         if op == 1:
             return "ON"
         else:
@@ -60,11 +60,11 @@ class HP83620A(Gpib):
 
     def output_off(self):
         "Turn RF output off"""
-        self.write("OUTPUT:STATE OFF")
+        self.write("POWER:STATE OFF")
 
     def output_on(self):
         "Turn RF output on"""
-        self.write("OUTPUT:STATE ON")
+        self.write("POWER:STATE ON")
 
     def get_power_level(self):
         """Get RF power level in dBm"""

@@ -1,6 +1,9 @@
 import serial
 from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, BeamPatternArgumentError
+from beampattern.logging import logger
 import numpy
+
+logger.name = __name__
 
 class Fluke(object):
     def __init__(self, port='/dev/ttyUSB0', debug=False):
@@ -58,7 +61,7 @@ class Fluke(object):
                 val, unit, state, attribute = args
                 val = float(val)
                 rdg[i] = val
-
+                logger.debug("Voltage read: %.5f" % val)
         return rdg.mean(), rdg.std()
                 #return val, "%g %s" % (val, unit)
 
