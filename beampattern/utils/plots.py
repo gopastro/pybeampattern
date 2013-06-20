@@ -36,9 +36,9 @@ class BeamPlot(object):
         else:
             raise BeamPatternGeneralError('get_cfg_file', "Could not parse config file from input file")
         three = fp.readline().strip()
-        match = re.match('# Comment: (?P<comment>[\w\s]*)', three)
-        if match:
-            self.comment = match.groupdict()['comment']
+        #match = re.match('# Comment: (?P<comment>[\w\s]*)', three)
+        #if match:
+        #    self.comment = match.groupdict()['comment']
 
     def _get_configuration(self):
         if self.cfgfile and os.path.exists(self.cfgfile):
@@ -83,7 +83,10 @@ class BeamPlot(object):
                 if linear:
                     ydata = self.data[:, find]
                 else:
-                    ydata = 10.0 * numpy.log10(self.data[:, find]/self.data[:, find].max())
+                    arg = self.data[:, find]/self.data[:, find].max()
+                    ind = numpy.where(arg <= 0.0)
+                    ydata = 10.0 * numpy.log10(arg)
+                    ydata[ind] = numpy.nan
                 if self.markers:
                     plt.plot(self.data[:, 0], ydata,
                              linestyle=self.linestyles[lind],
@@ -107,7 +110,7 @@ class BeamPlot(object):
             plt.ylabel('Beam Voltage (log)')
         plt.legend(loc='best')
         if title is None:
-            plt.title('%s; %s' % (self.comment, self.datetime_str))
+            plt.title('%s; %s' % (self.cfg['general']['comment'], self.datetime_str))
         else:
             plt.title(title)
         if self.grid:
