@@ -53,7 +53,7 @@ def will_debug():
     return logger.isEnabledFor(pylogging.DEBUG)
 
 def add_file_handler(log, fname):
-    handler = handlers.RotatingFileHandler(fname, maxBytes=20480,
+    handler = handlers.RotatingFileHandler(fname, maxBytes=104857600,
                                            backupCount=5)
     # create formatter
     formatter = pylogging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")

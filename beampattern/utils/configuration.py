@@ -38,7 +38,7 @@ config_spec_text = """
 fileloglevel  = integer(5, 50, default=10)
 consoleloglevel  = integer(5, 50, default=10)
 # comment is a long string which gets written to the output data file
-comment = string(max=100, default="BeamMap at 74 GHz")
+comment = string(max=150, default="BeamMap at 74 GHz")
 
 #general plot specific items
 [plot]
