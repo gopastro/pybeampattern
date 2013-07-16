@@ -259,7 +259,10 @@ class AzimuthMap(object):
             hdr += "# Data columns:\n"
             hdr += "# Az"
             for freq in self.synth.freq:
-                hdr += ",f%.1fGHz,f%.1fGHz std" % (freq, freq)
+                if self.nrdgs > 1:
+                    hdr += ",f%.1fGHz,f%.1fGHz std" % (freq, freq)
+                else:
+                    hdr += ",f%.1fGHz" % freq
             hdr += "\n"
         return hdr
 
@@ -305,7 +308,10 @@ class AzimuthMap(object):
                 time.sleep(0.2)
                 vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
-                fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
+                if self.nrdgs > 1:
+                    fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
+                else:
+                    fp.write(",%.6g,%.6g" % (vmean-self.offset))
                 plt.plot(az, vmean, self.plot_symbols[i])
                 plt.draw()
             fp.write('\n')
