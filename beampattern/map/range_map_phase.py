@@ -1,8 +1,6 @@
 #from beampattern.gpib_devices.hp3457a_multimeter import Multimeter
 from beampattern.gpib_devices.unidex11 import Unidex11
-from beampattern.gpib_devices.hp83620a import HP83620A
-from beampattern.gpib_devices.hp3478a_multimeter import Multimeter
-from beampattern.serial import Fluke
+from beampattern.gpib_devices.hp8510c import Analyzer_8510c
 from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, BeamPatternArgumentError
 from beampattern.logging import logger
 import matplotlib.pyplot as plt
@@ -35,6 +33,7 @@ class AzimuthPhaseMap(object):
         self.filename = filename
         self.datetime_str = datetime_str
         self.cfgfile = cfgfile
+        self.freq_list = []
         self.offset = 0.0
         self.offset_std = 0.0
         self.nrdgs = 1
@@ -74,203 +73,44 @@ class AzimuthPhaseMap(object):
             except:
                 logger.error("Unidex11 Not available")
                 raise BeamPatternGeneralError("open_devices", "Unidex11 Not available")
-        if self.devices.use_multi:
+        if self.devices.use_vna:
             try:
-                self.multimeter = Multimeter()
-                #if self.multimeter.idstr != 'HP3457A':
-                #    logger.error("Multimeter ID not right")
-                #    raise BeamPatternGeneralError("open_devices", "Multimeter ID not right")
-                logger.info("HP3478A multimeter initialized")
+                self.an = Analyzer_8510c()
+                logger.info("HP8510C vector network analyzer initialized")
                 time.sleep(0.5)
-                self.multimeter.setup_ac(nplc=self.multi.nplc,
-                                         range=self.multi.range,
-                                         nrdgs=self.multi.nrdgs,
-                                         resolution=self.multi.resolution)
-                self.nrdgs = self.multi.nrdgs
+                self.freq_list = numpy.array(self.vna.freq)*1e9
+                meas = self.vna.meas
+                self.an.initialize_vna(self.freq_list, meas=meas)
             except:
-                logger.error("Multimeter not available")
-                raise BeamPatternGeneralError("open_devices", "Multimeter not available")
-        
-        if self.devices.use_synth:
-            try:
-                self.syn = HP83620A()
-                self.syn.set_mult(self.synth.mult)
-                time.sleep(0.2)
-                logger.info("HP83620A synthesizer pulse mod setup")
-                self.syn.setup_pulse()
-                logger.info("HP83620A synthesizer available and online")
-            except:
-                logger.error("HP83620A not available")
-                raise BeamPatternGeneralError("open_devices", "HP83620A not available")
+                logger.error("VNA not available")
+                raise BeamPatternGeneralError("open_devices", "VNA not available")
 
-        if self.devices.use_fluke:
+    def take_readings(self):
+        if self.devices.use_vna:
             try:
-                self.flukemeter = Fluke()
-                logger.info("Fluke is online")
-                time.sleep(0.5)
-                self.nrdgs = self.fluke.nrdgs
+                data = self.an.get_freq_data()
+                return data
             except:
-                logger.error("Fluke 287 is not available. Error: %s" % sys.exc_info())
-                raise BeamPatternGeneralError("open_devices", "Fluke 287 not available")
-
-    def take_readings(self, nrdgs=2):
-        if self.devices.use_multi:
-            try:
-                vmean, vstd = self.multimeter.take_readings(nrdgs=nrdgs)
-                return vmean, vstd
-            except:
-                raise BeamPatternGeneralError("take_readings", "Cannot read HP voltmeter")
-        else:
-            try:
-                vmean, vstd = self.flukemeter.measure(nrdgs=nrdgs)
-                return vmean, vstd
-            except:
-                raise BeamPatternGeneralError("take_readings", "Cannot read Fluke voltmeter")
+                raise BeamPatternGeneralError("take_readings", "Cannot read VNA")
             
-    def _increase_power_level(self, plevel, vmin, vmax):
-        iterate = True
-        new_power = plevel
-        while iterate:
-            new_power += 1
-            if new_power > 13:
-                logger.error("Power level exceeded. Setting it to 13 dBm")
-                return (13)
-            self.syn.set_power_level(new_power)
-            time.sleep(0.2)
-            #vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
-            vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
-            if vmean > vmin:
-                if vmean < vmax:
-                    #success
-                    return new_power
-                else:
-                    new_power -= 0.5
-                    self.syn.set_power_level(new_power)
-                    time.sleep(0.2)
-                    #vmean, vstd = self.multimeter.take_readings(nrdgs=self.multi.nrdgs)
-                    vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
-                    logger.info("Current voltage is: %s" % vmean)
-                    return new_power
-            else:
-                iterate = True
-
-    def _decrease_power_level(self, plevel, vmin, vmax):
-        iterate = True
-        new_power = plevel
-        while iterate:
-            new_power -= 1
-            if new_power < -5:
-                logger.error("Power level too low. Setting it to -5 dBm")
-                return (-5)
-            self.syn.set_power_level(new_power)
-            time.sleep(0.2)
-            vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
-            if vmean < vmax:
-                if vmean > vmin:
-                    #success
-                    return new_power
-                else:
-                    new_power += 0.5
-                    self.syn.set_power_level(new_power)
-                    time.sleep(0.2)
-                    vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
-                    logger.info("Current voltage is: %s" % vmean)
-                    return new_power
-            else:
-                iterate = True
-
-    def check_boresight_power(self, vmin=6.0, vmax=7.0):
-        """
-        Adjust boresight rf power level so that the
-        read voltage is between vmin and vmax, and store
-        the power levels in an array
-        """
-        if self.offset != 0.0:
-            #not already at home
-            logger.info("Go to home position")
-            self.uni.home(axis='X')
-            logger.info("Waiting 10 seconds to be sure")
-            time.sleep(10.0)
-        self.rfpower = []
-        for freq in self.synth.freq:
-            self.syn.set_freq(freq*1e9)
-            time.sleep(0.3)
-            plevel = self.syn.get_power_level()
-            time.sleep(2.0)
-            vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
-            if vmean >= vmin and vmean <= vmax:
-                self.rfpower.append(plevel)
-            else:
-                if vmean < vmin:
-                    #too little power
-                    plevel = self._increase_power_level(plevel, vmin, vmax)
-                    self.rfpower.append(plevel)
-                else:
-                    #too much power
-                    plevel = self._decrease_power_level(plevel, vmin, vmax)
-                    self.rfpower.append(plevel)
-            logger.info("For freq = %s GHz, power level needed is %s dBm" % (freq, plevel))
-        logger.info("Done checking boresight power")
         
-    def measure_offset(self):
-        """
-        Measures the zero-point offset of the meter
-        """
-        logger.info("Go to home position")
-        self.uni.home(axis='X')
-        logger.info("Waiting 10 seconds to be sure")
-        time.sleep(10.0)
-        logger.info("Measuring zero point offset, turning off source")
-        self.syn.output_off()
-        time.sleep(3.0)
-        vmean, vstd = self.take_readings(nrdgs=5)
-        self.offset = vmean
-        self.offset_std = vstd
-        logger.info("Measured offset of the voltmeter as: %s" % self.offset)
-        self.syn.output_on()
-        logger.info("Turning synth source back on")
-        time.sleep(0.3)
-        
-    def make_header(self, adjust_boresight=False):
+    def make_header(self):
         hdr = ""
         hdr += "# Beammap Timestamp: %s\n" % self.datetime_str
         hdr += "# Configfile: %s\n" % self.cfgfile
         hdr += "# Comment: %s\n" % self.general.comment
-        hdr += "# use_unidex: %s; use_multi: %s; use_synth: %s\n" % \
-               (self.devices.use_unidex, self.devices.use_multi, self.devices.use_synth)
+        hdr += "# use_unidex: %s; use_vna: %s\n" % \
+               (self.devices.use_unidex, self.devices.use_vna)
         hdr += "# Map Azimuth Params: xmin: %.2f deg; xmax: %.2f deg; xinc: %.2f deg\n" % \
                (self.azimuth.xmin, self.azimuth.xmax, self.azimuth.xinc)
         hdr += "# Map Velocity: %.2f deg/s; Slew speed: %.2f deg/s\n" % \
                (self.azimuth.xmap_vel, self.azimuth.xslew_vel)
-        hdr += "# Multimeter settings: NPLC: %s; nrdgs: %d; range: %s; res: %.5g\n" % \
-               (self.multi.nplc, self.multi.nrdgs, self.multi.range, self.multi.resolution)
-        if self.devices.use_fluke:
-            hdr += "# Fluke device: %s; nrdgs: %d\n" % \
-                   (self.fluke.device, self.fluke.nrdgs)
-        hdr += "# Voltage offset: %.5g +/- %.5g\n" % (self.offset, self.offset_std)
-        if self.devices.use_synth:
-            hdr += "# Synthesizer Multiplier: %.1f\n" % (self.synth.mult)
-            hdr += "# Frequenies (GHz): %s\n" % (self.synth.freq)
-            if adjust_boresight:
-                hdr += "# Adjusted boresight power levels: "
-                for i, freq in enumerate(self.synth.freq):
-                    hdr += "f:%s GHz P:% dBm " % (freq, self.rfpower[i])
-                hdr += "\n"
-            hdr += "# Data columns:\n"
-            hdr += "# Az"
-            for freq in self.synth.freq:
-                if self.nrdgs > 1:
-                    hdr += ",f%.1fGHz,f%.1fGHz std" % (freq, freq)
-                else:
-                    hdr += ",f%.1fGHz" % freq
-            hdr += "\n"
+        if self.devices.use_vna:
+            hdr += "# Freq_list: %s; measure: %s\n" % \
+                (self.freq_list/1e9, self.vna.meas)
         return hdr
 
-    def make_map(self, adjust_boresight=False, measure_ac_offset=True):
-        if measure_ac_offset:
-            self.measure_offset()
-        if adjust_boresight:
-            self.check_boresight_power()            
+    def make_map(self):
         self.uni.home(axis='X')
         time.sleep(10.0)
         azimuths = []
@@ -286,7 +126,7 @@ class AzimuthPhaseMap(object):
         time.sleep(wait)
 
         fp = open(self.filename, 'w')
-        header = self.make_header(adjust_boresight=adjust_boresight)
+        header = self.make_header()
         fp.write(header)
         plt.ion()
         plt.plot([self.azimuth.xmin, self.azimuth.xmax], [0, 0], 'r-')
@@ -299,20 +139,11 @@ class AzimuthPhaseMap(object):
             logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
             time.sleep(wait)
             fp.write("%.3f" % az)
-            for i, freq in enumerate(self.synth.freq):
-                self.syn.set_freq(freq*1e9)
-                time.sleep(0.1)
-                if adjust_boresight:
-                    self.syn.set_power_level(self.rfpower[i])
-                    logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, self.rfpower[i]))
-                time.sleep(0.2)
-                vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
-                logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
-                if self.nrdgs > 1:
-                    fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
-                else:
-                    fp.write(",%.6g,%.6g" % (vmean-self.offset))
-                plt.plot(az, vmean, self.plot_symbols[i])
+            data = self.take_readings()
+            for i in range(len(self.freq_list)):
+                fp.write(",%.6g,%.6g", (data[i].real, data[i].imag))
+                logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +1j* %.6g" % (az, self.freq_list[i]/1e9, data[i].real, data[i].imag))
+                plt.plot(az, numpy.abs(data[i]), self.plot_symbols[i])
                 plt.draw()
             fp.write('\n')
                          

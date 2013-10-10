@@ -80,7 +80,7 @@ yinc = float(0.1, 180.0, default=1.0)
 # This object contains configuration items specfic to
 # frequency and frequency sweeps
 # freq is a list of floats
-freq = float_list(min=1, max=100, default=list(70.0, 71.0, 72.0, 73.0, 74.0, 75.0))
+freq = float_list(min=1, max=100, default=list(11.7, 12.0, 12.2))
 meas = string(max=3, default="S22")
 """
 

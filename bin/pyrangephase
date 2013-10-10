@@ -9,7 +9,7 @@ import pylab
 
 from beampattern.utils.phase_configuration import ConfigurationPhase
 from beampattern.logging import logger
-from beampattern.map.range_map import AzimuthMap
+from beampattern.map.range_map_phase import AzimuthPhaseMap
 logger.name = __name__
         
 if __name__ == '__main__':
@@ -42,9 +42,9 @@ if __name__ == '__main__':
         filename = base + "_" + datetime_str + ext
         logger.info("Will write output to %s" % filename)
 
-    amap = AzimuthMap(cfg.cfg, filename, datetime_str, cfgfile)
+    amap = AzimuthPhaseMap(cfg.cfg, filename, datetime_str, cfgfile)
     amap.open_devices()
-    amap.make_map(adjust_boresight=options.adjust, measure_ac_offset=options.offset)
+    amap.make_map()
     raw_input("Enter any key to quit > ")
     sys.exit(0)
 
