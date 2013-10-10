@@ -67,8 +67,8 @@ class AzimuthPhaseMap(object):
                 self.uni = Unidex11()
                 self.uni.reset()
                 time.sleep(2.0)
-                #self.uni.home(axis='X')
-                #time.sleep(10.0)
+                self.uni.home(axis='X')
+                time.sleep(10.0)
                 logger.info("Unidex 11 available, reset and homed")
             except:
                 logger.error("Unidex11 Not available")
@@ -79,8 +79,9 @@ class AzimuthPhaseMap(object):
                 logger.info("HP8510C vector network analyzer initialized")
                 time.sleep(0.5)
                 self.freq_list = numpy.array(self.vna.freq)*1e9
+                print self.freq_list
                 meas = self.vna.meas
-                self.an.initialize_vna(self.freq_list, meas=meas)
+                self.an.initialize_vna(self.freq_list, measure=meas)
             except:
                 logger.error("VNA not available")
                 raise BeamPatternGeneralError("open_devices", "VNA not available")
@@ -131,7 +132,7 @@ class AzimuthPhaseMap(object):
         plt.ion()
         plt.plot([self.azimuth.xmin, self.azimuth.xmax], [0, 0], 'r-')
         plt.xlim(self.azimuth.xmin, self.azimuth.xmax)
-        plt.ylim(-0.5, 10.0)
+        plt.ylim(-0.001, 0.007)
         plt.draw()
         for az in azimuths:
             wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 1.0
@@ -141,7 +142,7 @@ class AzimuthPhaseMap(object):
             fp.write("%.3f" % az)
             data = self.take_readings()
             for i in range(len(self.freq_list)):
-                fp.write(",%.6g,%.6g", (data[i].real, data[i].imag))
+                fp.write(",%.6g,%.6g" % (data[i].real, data[i].imag))
                 logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +1j* %.6g" % (az, self.freq_list[i]/1e9, data[i].real, data[i].imag))
                 plt.plot(az, numpy.abs(data[i]), self.plot_symbols[i])
                 plt.draw()
