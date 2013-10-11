@@ -1,0 +1,101 @@
+#!/usr/bin/python
+
+from optparse import OptionParser
+import sys, os
+import numpy
+import time
+import datetime
+import pylab
+
+from beampattern.utils.plots import BeamPlotPhase
+from beampattern.logging import logger
+logger.name = __name__
+        
+def limits_callback(option, opt, value, parser):
+    setattr(parser.values, option.dest, map(float, value.split(',')))
+    
+if __name__ == '__main__':
+    usage = "usage: %prog [options]"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-m", "--nomarkers",
+                      action="store_true", 
+                      dest="nomarkers", default=False,                     
+                      help="Suppress data markers")
+    parser.add_option("-g", "--nogrid",
+                      action="store_true", 
+                      dest="nogrid", default=False,                     
+                      help="Suppress grid")
+    parser.add_option("-l", "--linear",
+                      action="store_true",
+                      dest="linear", default=True,
+                      help="make a linear plot of beam-pattern amplitude")
+    parser.add_option("-L", "--log",
+                      action="store_false",
+                      dest="linear", 
+                      help="make a log plot of beam-pattern amplitude")
+    parser.add_option("-F", "--frequencies",
+                      action="store", type="string",
+                      dest="frequencies",
+                      help="Comma separated list of frequencies to plot. Freq in GHz. If not set, will use all frequencies in the data file")
+    parser.add_option("-Y", "--ylimamp",
+                      dest="ylimamp",
+                      action="callback", type="string",
+                      callback=limits_callback,
+                      help="Couple of comma-separated values for [ymin, ymax] in amp plot")
+    parser.add_option("-X", "--xlimamp",
+                      dest="xlimamp",
+                      action="callback", type="string",
+                      callback=limits_callback,
+                      help="Couple of comma-separated values for [xmin, xmax] in amp plot")
+    parser.add_option("-y", "--ylimphase",
+                      dest="ylimphase",
+                      action="callback", type="string",
+                      callback=limits_callback,
+                      help="Couple of comma-separated values for [ymin, ymax] in phase plot")
+    parser.add_option("-x", "--xlimphase",
+                      dest="xlimphase",
+                      action="callback", type="string",
+                      callback=limits_callback,
+                      help="Couple of comma-separated values for [xmin, xmax] in phase plot")
+    parser.add_option("-t", "--title",
+                      dest="title",
+                      type="string",
+                      help="Title for plot to override default title from config file")
+    parser.add_option("-p", "--plotfile",
+                      action="store", type="string",
+                      dest="plotfile", default="beamplot.png",
+                      help="Output plot file")
+    parser.add_option("-f", "--filename",
+                      action="store", type="string",
+                      dest="filename", 
+                      help="Filename of data to plot")
+
+    (options, args) = parser.parse_args()
+    if not options.filename:
+        parser.print_help()
+        parser.error("Required filename option not given")
+    if options.nogrid:
+        grid = False
+    else:
+        grid = True
+    if options.nomarkers:
+        markers = False
+    else:
+        markers = True
+    frequencies = None
+    if options.frequencies:
+        try:
+            frequencies = map(float, options.frequencies.split(','))
+        except:
+            logger.error("Cannot parse frequency option. Will use all frequencies")
+            frequencies = None
+            
+    bplot = BeamPlotPhase(options.filename, markers=markers,
+                           grid=grid, plotfile=options.plotfile)
+    if options.linear:
+        bplot.plot_linear(frequencies, options=options)
+    else:
+        bplot.plot_log(frequencies, options=options)
+    raw_input("Enter any key to quit > ")
+    sys.exit(0)
+
