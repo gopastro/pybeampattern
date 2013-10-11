@@ -82,6 +82,7 @@ yinc = float(0.1, 180.0, default=1.0)
 # freq is a list of floats
 freq = float_list(min=1, max=100, default=list(11.7, 12.0, 12.2))
 meas = string(max=3, default="S22")
+avg_value = integer(2, 4096, default=32)
 """
 
 def default_config():

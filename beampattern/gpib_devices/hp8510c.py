@@ -73,7 +73,7 @@ class Analyzer_8510c(Gpib):
         except GpibError:
             return None
         
-    def initialize_vna(self, freq_list, measure='S22'):
+    def initialize_vna(self, freq_list, measure='S22', avg_value = 32):
         """
         Setup the VNA with a requisite frequency list
         and setup single parameter given by measure
@@ -83,6 +83,7 @@ class Analyzer_8510c(Gpib):
         self.write('REIP;')
         self.write('SINC; SING; AUTO; CONT;')
         self.write('LISFREQ;')
+	self.write('AVERON %d;' % avg_value)
 
     
     def get_freq_data(self):        
