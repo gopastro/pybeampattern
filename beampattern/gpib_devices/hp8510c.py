@@ -83,7 +83,8 @@ class Analyzer_8510c(Gpib):
         self.write('REIP;')
         self.write('SINC; SING; AUTO; CONT;')
         self.write('LISFREQ;')
-
+        #set attenuators
+        self.write('ATTP1 0; ATTP2 0;')
     
     def get_freq_data(self):        
         read_again = True
