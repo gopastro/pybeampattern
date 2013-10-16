@@ -81,12 +81,18 @@ class Analyzer_8510c(Gpib):
         self.set_cw_frequency_list(freq_list)
         self.write('%s;' % measure)
         self.write('REIP;')
+        time.sleep(0.5);
         self.write('SINC; SING; AUTO; CONT;')
+        time.sleep(0.5);
         self.write('LISFREQ;')
+        time.sleep(0.5);
 	self.write('AVERON %d;' % avg_value)
+        print "Wrote averon"
+        time.sleep(0.5);
         #set attenuators
         self.write('ATTP1 0; ATTP2 0;')
-    
+        print ("Wrote atten pos")
+
     def get_freq_data(self):        
         read_again = True
         while(read_again):
