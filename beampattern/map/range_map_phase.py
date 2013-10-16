@@ -81,7 +81,7 @@ class AzimuthPhaseMap(object):
                 self.freq_list = numpy.array(self.vna.freq)*1e9
                 print self.freq_list
                 meas = self.vna.meas
-                avg_value = self.vna.avg.value
+                avg_value = self.vna.avg_value
                 self.an.initialize_vna(self.freq_list, measure=meas,
                                        avg_value=avg_value)
             except:
