@@ -84,9 +84,9 @@ yinc = float(0.1, 180.0, default=1.0)
 # This object contains configuration items specfic to
 # frequency and frequency sweeps
 # freq is a list of floats
-freq = float_list(min=1, max=100, default=list(70.0, 71.0, 72.0, 73.0, 74.0, 75.0))
+freq = float_list(min=1, max=300, default=list(70.0, 71.0, 72.0, 73.0, 74.0, 75.0))
 # Frequency multiplier to use in the synthesizer
-mult = float(1.0, 10, default=4.0)
+mult = float(1.0, 20.0, default=18.0)
 
 [multi]
 # This object contains configuration items specific

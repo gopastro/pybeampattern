@@ -11,7 +11,7 @@ class HP83620A(Gpib):
     """A Gpib helper class for interfacing with the hp 83620a
     synthesizer
     """
-    def __init__(self, name='hp83620a', pad=None, sad=0):
+    def __init__(self, name='hp83620a', pad=12, sad=0):
         Gpib.__init__(self, name=name, pad=pad, sad=sad)
         self.write('SYST:LANG SCPI') # set language to SCPI
         time.sleep(0.2)

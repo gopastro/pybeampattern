@@ -1,0 +1,58 @@
+#!/usr/bin/python
+
+from optparse import OptionParser
+import sys, os
+import numpy
+import time
+import datetime
+import pylab
+
+from beampattern.utils.configuration import Configuration
+from beampattern.logging import logger
+from beampattern.map.range_map_general import BeamMap
+logger.name = __name__
+        
+if __name__ == '__main__':
+    usage = "usage: %prog [options]"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-c", "--config",
+                      action="store", type="string",
+                      dest="configfile", default="beammap.cfg",
+                      help="Input Configuration file for beammap")
+    parser.add_option("-a", "--adjust",
+                      action="store_true", dest="adjust",
+                      default=False,
+                      help="Do boresight power level adjustment at each frequency? (default %default)")
+    parser.add_option("-o", "--offset",
+                      action="store_true", dest="offset",
+                      default=True,
+                      help="Measure offset with source off at beginning? (default %default)")
+    parser.add_option("-f", "--filename",
+                      action="store", type="string",
+                      dest="filename", default="beamscan.txt",
+                      help="Ascii Filename to store data into")
+
+    datetime_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    (options, args) = parser.parse_args()
+
+    if options.configfile:
+        if os.path.exists(options.configfile):
+            logger.info("Using configuration file %s" % options.configfile)
+        else:
+            logger.info("Will create configuration file %s from defaults" % options.configfile)
+        cfg = Configuration(options.configfile)
+        base, ext = os.path.splitext(options.configfile)
+        cfgfile = base + "_" + datetime_str + ext
+        cfg.save_config(cfg.cfg, cfgfile)
+    if options.filename:
+        base, ext = os.path.splitext(options.filename)        
+        filename = base + "_" + datetime_str + ext
+        logger.info("Will write output to %s" % filename)
+
+    amap = BeamMap(cfg.cfg, filename, datetime_str, cfgfile)
+    amap.open_devices()
+    amap.make_cross_scan(adjust_boresight=options.adjust, measure_ac_offset=options.offset)
+    raw_input("Enter any key to quit > ")
+    sys.exit(0)
+

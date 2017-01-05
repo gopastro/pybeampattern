@@ -9,7 +9,7 @@ logger.name = __name__
 class Multimeter(Gpib):
     """A Gpib helper class for interfacing with the HP3457A
     digital multimeter"""
-    def __init__(self, name='hp3478a', pad=None, sad=0,
+    def __init__(self, name='hp3478a', pad=23, sad=0,
                  asksleep=0.02):
         Gpib.__init__(self, name=name, pad=pad, sad=sad)
         self.asksleep = asksleep

@@ -19,7 +19,7 @@ class ConfigObj(object):
         pass
 
 
-class AzimuthMap(object):
+class BeamMap(object):
     """
     Given a config object dictionary cfg, and a filename to
     write output data to and a datetime_str, this class
@@ -40,9 +40,9 @@ class AzimuthMap(object):
         self.offset = 0.0
         self.offset_std = 0.0
         self.nrdgs = 1
-        if not self.check_map_azimuth_parameters():
+        if not self.check_map_parameters():
             logger.error("Map Parameters Malformed")
-            raise BeamPatternGeneralError("AzimuthMap", "Map Parameters Malformed")
+            raise BeamPatternGeneralError("BeamMap", "Map Parameters Malformed")
 
     def _get_config_parameters(self):
         for key, val in self.cfg.items():
@@ -51,12 +51,18 @@ class AzimuthMap(object):
             for k, v in val.items():
                 setattr(obj, k, v)
 
-    def check_map_azimuth_parameters(self):
+    def check_map_parameters(self):
         if self.azimuth.xmin < -180.0:
             logger.error("xmin is set to %s, and is less than -180 degrees. Please fix" % self.azimuth.xmin)
             return False
         if self.azimuth.xmax > 180.0:
             logger.error("xmax is set to %s, and is greater than 180 degrees. Please fix" % self.azimuth.xmax)
+            return False
+        if self.elevation.ymin < -180.0:
+            logger.error("ymin is set to %s, and is less than -180 degrees. Please fix" % self.elevation.ymin)
+            return False
+        if self.elevation.ymax > 180.0:
+            logger.error("ymax is set to %s, and is greater than 180 degrees. Please fix" % self.elevation.ymax)
             return False
         return True
 
@@ -199,6 +205,9 @@ class AzimuthMap(object):
             self.uni.home(axis='X')
             logger.info("Waiting 10 seconds to be sure")
             time.sleep(10.0)
+            self.uni.home(axis='Y')
+            logger.info("Waiting 10 seconds to be sure")
+            time.sleep(10.0)
         self.rfpower = []
         for freq in self.synth.freq:
             self.syn.set_freq(freq*1e9)
@@ -228,6 +237,9 @@ class AzimuthMap(object):
         self.uni.home(axis='X')
         logger.info("Waiting 10 seconds to be sure")
         time.sleep(10.0)
+        self.uni.home(axis='Y')
+        logger.info("Waiting 10 seconds to be sure")
+        time.sleep(10.0)
         logger.info("Measuring zero point offset, turning off source")
         self.syn.output_off()
         time.sleep(3.0)
@@ -239,7 +251,7 @@ class AzimuthMap(object):
         logger.info("Turning synth source back on")
         time.sleep(0.3)
         
-    def make_header(self, adjust_boresight=False):
+    def make_header(self, adjust_boresight=False, azel='az'):
         hdr = ""
         hdr += "# Beammap Timestamp: %s\n" % self.datetime_str
         hdr += "# Configfile: %s\n" % self.cfgfile
@@ -248,6 +260,8 @@ class AzimuthMap(object):
                (self.devices.use_unidex, self.devices.use_multi, self.devices.use_synth)
         hdr += "# Map Azimuth Params: xmin: %.2f deg; xmax: %.2f deg; xinc: %.2f deg\n" % \
                (self.azimuth.xmin, self.azimuth.xmax, self.azimuth.xinc)
+        hdr += "# Map Elevation Params: ymin: %.2f deg; ymax: %.2f deg; yinc: %.2f deg\n" % \
+               (self.elevation.ymin, self.elevation.ymax, self.elevation.yinc)
         hdr += "# Map Velocity: %.2f deg/s; Slew speed: %.2f deg/s\n" % \
                (self.azimuth.xmap_vel, self.azimuth.xslew_vel)
         hdr += "# Multimeter settings: NPLC: %s; nrdgs: %d; range: %s; res: %.5g\n" % \
@@ -265,7 +279,10 @@ class AzimuthMap(object):
                     hdr += "f:%s GHz P:% dBm " % (freq, self.rfpower[i])
                 hdr += "\n"
             hdr += "# Data columns:\n"
-            hdr += "# Az"
+            if azel in ('az', 'el'):
+                hdr += "# %s" % (azel.title())
+            else:
+                hdr += "# Az, El"
             for freq in self.synth.freq:
                 if self.nrdgs > 1:
                     hdr += ",f%.1fGHz,f%.1fGHz std" % (freq, freq)
@@ -274,13 +291,13 @@ class AzimuthMap(object):
             hdr += "\n"
         return hdr
 
-    def make_map(self, adjust_boresight=False, measure_ac_offset=True):
+    def make_cross_scan(self, adjust_boresight=False, measure_ac_offset=True):
         if measure_ac_offset:
             self.measure_offset()
         if adjust_boresight:
             self.check_boresight_power()            
-        self.uni.home(axis='X')
-        time.sleep(10.0)
+        #self.uni.home(axis='X')
+        #time.sleep(10.0)
         azimuths = []
         for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
                               self.azimuth.xinc):
@@ -288,45 +305,174 @@ class AzimuthMap(object):
                 x = self.azimuth.xmax
             azimuths.append(x)
         azimuths = numpy.array(azimuths)
+        elevations = []
+        for y in numpy.arange(self.elevation.ymin, self.elevation.ymax + self.elevation.yinc,
+                              self.elevation.yinc):
+            if y > self.elevation.ymax:
+                y = self.elevation.ymax
+            elevations.append(y)
+        elevations = numpy.array(elevations)
+        logger.info("Starting with Azimuth Scan")
         wait = (abs(azimuths[0]-self.uni.pos_az)/self.azimuth.xslew_vel) + 1.0
         self.uni.set_azimuth(azimuths[0], self.azimuth.xslew_vel)
         logger.info("Sleeping for %.2f seconds while stage gets to start of map" % wait)
         time.sleep(wait)
+        base, ext = os.path.splitext(self.filename)
+        if len(azimuths) > 0:
+            az_filename = base+'_az'+ext
+            fp = open(az_filename, 'w')
+            header = self.make_header(adjust_boresight=adjust_boresight)
+            fp.write(header)
+            plt.ion()
+            plt.plot([self.azimuth.xmin, self.azimuth.xmax], [0, 0], 'r-')
+            plt.xlim(self.azimuth.xmin, self.azimuth.xmax)
+            plt.ylim(-0.5, 10.0)
+            plt.draw()
 
-        fp = open(self.filename, 'w')
-        header = self.make_header(adjust_boresight=adjust_boresight)
-        fp.write(header)
-        plt.ion()
-        plt.plot([self.azimuth.xmin, self.azimuth.xmax], [0, 0], 'r-')
-        plt.xlim(self.azimuth.xmin, self.azimuth.xmax)
-        plt.ylim(-0.5, 10.0)
-        plt.draw()
-        for az in azimuths:
-            wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 1.0
-            self.uni.set_azimuth(az, self.azimuth.xmap_vel)
-            logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
-            time.sleep(wait)
-            fp.write("%.3f" % az)
-            for i, freq in enumerate(self.synth.freq):
-                self.syn.set_freq(freq*1e9)
-                time.sleep(0.1)
-                if adjust_boresight:
-                    self.syn.set_power_level(self.rfpower[i])
-                    logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, self.rfpower[i]))
-                time.sleep(0.2)
-                vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
-                logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
-                if self.nrdgs > 1:
-                    fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
-                else:
-                    fp.write(",%.6g,%.6g" % (vmean-self.offset, 0.0))
-                plt.plot(az, vmean, self.plot_symbols[i])
-                plt.draw()
-            fp.write('\n')
-                         
-        time.sleep(10.0)
-        self.uni.home(axis='X')
-        logger.info("Map Completed, Saving data file %s" % self.filename)
-        fp.close()
+            for az in azimuths:
+                wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 1.0
+                self.uni.set_azimuth(az, self.azimuth.xmap_vel)
+                logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
+                time.sleep(wait)
+                fp.write("%.3f" % az)
+                for i, freq in enumerate(self.synth.freq):
+                    self.syn.set_freq(freq*1e9)
+                    time.sleep(0.1)
+                    if adjust_boresight:
+                        self.syn.set_power_level(self.rfpower[i])
+                        logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, self.rfpower[i]))
+                    time.sleep(0.2)
+                    vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
+                    logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
+                    if self.nrdgs > 1:
+                        fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
+                    else:
+                        fp.write(",%.6g,%.6g" % (vmean-self.offset, 0.0))
+                    plt.plot(az, vmean, self.plot_symbols[i])
+                    plt.draw()
+                fp.write('\n')
 
-                
+            time.sleep(10.0)
+            self.uni.home(axis='X')
+            logger.info("Azimuth Map Completed, Saving data file %s" % az_filename)
+            fp.close()
+
+        if len(elevations) > 0:
+            el_filename = base+'_el'+ext
+            fp = open(el_filename, 'w')
+            header = self.make_header(adjust_boresight=adjust_boresight, azel='el')
+            fp.write(header)
+            plt.ion()
+            plt.figure()
+            plt.plot([self.elevation.ymin, self.elevation.ymax], [0, 0], 'r-')
+            plt.xlim(self.elevation.ymin, self.elevation.ymax)
+            plt.ylim(-0.5, 10.0)
+            plt.draw()
+            for el in elevations:
+                wait = (abs(el-self.uni.pos_el)/self.azimuth.xmap_vel) + 1.0
+                self.uni.set_elevation(el, self.azimuth.xmap_vel)
+                logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, el))
+                time.sleep(wait)
+                fp.write("%.3f" % el)
+                for i, freq in enumerate(self.synth.freq):
+                    self.syn.set_freq(freq*1e9)
+                    time.sleep(0.1)
+                    if adjust_boresight:
+                        self.syn.set_power_level(self.rfpower[i])
+                        logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, self.rfpower[i]))
+                    time.sleep(0.2)
+                    vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
+                    logger.info("El: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (el, freq, vmean, vstd))
+                    if self.nrdgs > 1:
+                        fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
+                    else:
+                        fp.write(",%.6g,%.6g" % (vmean-self.offset, 0.0))
+                    plt.plot(el, vmean, self.plot_symbols[i])
+                    plt.draw()
+                fp.write('\n')
+
+            time.sleep(10.0)
+            self.uni.home(axis='Y')
+            logger.info("Elevation Map Completed, Saving data file %s" % el_filename)
+            fp.close()
+            
+            
+    def make_diagonal_scan(self, adjust_boresight=False, measure_ac_offset=True):
+        if measure_ac_offset:
+            self.measure_offset()
+        if adjust_boresight:
+            self.check_boresight_power()            
+        #self.uni.home(axis='X')
+        #time.sleep(10.0)
+        azimuths = []
+        for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
+                              self.azimuth.xinc):
+            if x > self.azimuth.xmax:
+                x = self.azimuth.xmax
+            azimuths.append(x)
+        azimuths = numpy.array(azimuths)
+        elevations = []
+        for y in numpy.arange(self.elevation.ymin, self.elevation.ymax + self.elevation.yinc,
+                              self.elevation.yinc):
+            if y > self.elevation.ymax:
+                y = self.elevation.ymax
+            elevations.append(y)
+        elevations = numpy.array(elevations)
+        wait = (abs(azimuths[0]-self.uni.pos_az)/self.azimuth.xslew_vel) + 1.0
+        self.uni.set_azimuth(azimuths[0], self.azimuth.xslew_vel)
+        logger.info("Sleeping for %.2f seconds while stage gets to az start of map" % wait)
+        time.sleep(wait)
+        wait = (abs(elevations[0]-self.uni.pos_el)/self.azimuth.xslew_vel) + 1.0
+        self.uni.set_elevation(elevations[0], self.azimuth.xslew_vel)
+        diags = numpy.sqrt(azimuths**2 + elevations**2)
+        ind = numpy.where(azimuths<0.0)
+        diags[ind] = -diags[ind]
+        base, ext = os.path.splitext(self.filename)
+        if len(azimuths) > 0 and len(elevations) > 0:
+            filename = base+'_diagonal'+ext
+            fp = open(filename, 'w')
+            header = self.make_header(adjust_boresight=adjust_boresight, azel='diag')
+            fp.write(header)
+            plt.ion()
+            plt.plot([diags[0], diags[-1]], [0, 0], 'r-')
+            plt.xlim(diags[0], diags[-1])
+            plt.ylim(-0.5, 10.0)
+            plt.draw()
+
+            for i, az in enumerate(azimuths):
+                el = elevations[i]
+                diag = diags[i]
+                wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 1.0
+                self.uni.set_azimuth(az, self.azimuth.xmap_vel)
+                logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees az" % (wait, az))
+                time.sleep(wait)
+                wait = (abs(el-self.uni.pos_el)/self.azimuth.xmap_vel) + 1.0
+                self.uni.set_elevation(el, self.azimuth.xmap_vel)
+                logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees el" % (wait, el))
+                time.sleep(wait)
+                fp.write("%.3f, %.3f" % (az, el))
+                for i, freq in enumerate(self.synth.freq):
+                    self.syn.set_freq(freq*1e9)
+                    time.sleep(0.1)
+                    if adjust_boresight:
+                        self.syn.set_power_level(self.rfpower[i])
+                        logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, self.rfpower[i]))
+                    time.sleep(0.2)
+                    vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
+                    logger.info("Az: %.2f, El: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, el, freq, vmean, vstd))
+                    if self.nrdgs > 1:
+                        fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
+                    else:
+                        fp.write(",%.6g,%.6g" % (vmean-self.offset, 0.0))
+                    plt.plot(diag, vmean, self.plot_symbols[i])
+                    plt.draw()
+                fp.write('\n')
+
+            time.sleep(10.0)
+            self.uni.home(axis='X')
+            self.uni.home(axis='Y')            
+            logger.info("Diagonal Map Completed, Saving data file %s" % filename)
+            fp.close()
+
+            
+            

@@ -21,7 +21,7 @@ class Unidex11(Gpib):
     A GPIB helper class for interfacing with the Unidex 11
     motion controller
     """
-    def __init__(self, name='unidex11', pad=0, sad=0):
+    def __init__(self, name='unidex11', pad=2, sad=0):
         Gpib.__init__(self, name=name, pad=pad, sad=sad)
         #self.idstr = self.idstring()
         self.step_size_az = 0.1/60. # 0.1 arcmin step size
@@ -36,7 +36,9 @@ class Unidex11(Gpib):
         Instrument Reset
         """
         self.write('C')
-
+        time.sleep(2.0)
+        # need the 'O' to remove any hold conditions that may be left over
+        self.write('O')
 
     def home(self, axis='X'):        
         """

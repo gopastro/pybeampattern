@@ -51,6 +51,11 @@ if __name__ == '__main__':
                       dest="title",
                       type="string",
                       help="Title for plot to override default title from config file")
+    parser.add_option("-a", "--azel",
+                      dest="azel",
+                      type="string",
+                      default="az",
+                      help="Az, el or diag plot (default az)")
     parser.add_option("-p", "--plotfile",
                       action="store", type="string",
                       dest="plotfile", default="beamplot.png",
@@ -85,10 +90,10 @@ if __name__ == '__main__':
                      grid=grid, plotfile=options.plotfile)
     if options.linear:
         bplot.plot_linear(frequencies, xlim=options.xlim, ylim=options.ylim,
-                          title=options.title)
+                          title=options.title, azel=options.azel)
     else:
         bplot.plot_log(frequencies, xlim=options.xlim, ylim=options.ylim,
-                       title=options.title)
+                       title=options.title, azel=options.azel)
     raw_input("Enter any key to quit > ")
     sys.exit(0)
 

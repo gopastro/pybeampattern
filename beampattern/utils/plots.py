@@ -63,7 +63,8 @@ class BeamPlot(object):
         return header
     
     def _plot_data(self, frequencies=None, linear=True,
-                   ylim=None, xlim=None, title=None):
+                   ylim=None, xlim=None, title=None, 
+                   azel='az'):
         print title
         plt.ion()
         if frequencies is None:
@@ -78,7 +79,10 @@ class BeamPlot(object):
         #             vmax = cmax if cmax > vmax else vmax
         for i, freq in enumerate(frequencies):
             if freq in self.cfg['synth']['freq']:
-                find = self.cfg['synth']['freq'].index(freq)*2 + 1
+                if azel in ('az', 'el'):
+                    find = self.cfg['synth']['freq'].index(freq)*2 + 1
+                else:
+                    find = self.cfg['synth']['freq'].index(freq)*2 + 2
                 lind = i % len(self.linestyles)
                 pind = i % len(self.plot_symbols)
                 if linear:
@@ -89,22 +93,54 @@ class BeamPlot(object):
                     ydata = 10.0 * numpy.log10(arg)
                     ydata[ind] = numpy.nan
                 if self.markers:
-                    plt.plot(self.data[:, 0], ydata,
-                             linestyle=self.linestyles[lind],
-                             marker=self.plot_symbols[pind],
-                             markersize=3,
-                             label='%.1f GHz' % freq)
+                    if azel in ('az', 'el'):
+                        plt.plot(self.data[:, 0], ydata,
+                                 linestyle=self.linestyles[lind],
+                                 marker=self.plot_symbols[pind],
+                                 markersize=3,
+                                 label='%.1f GHz' % freq)
+                    else:
+                        diag = numpy.sqrt(self.data[:, 0]**2 + self.data[:, 1]**2)
+                        ind = numpy.where(self.data[:, 0] < 0)
+                        diag[ind] = -diag[ind]
+                        plt.plot(diag, ydata,
+                                 linestyle=self.linestyles[lind],
+                                 marker=self.plot_symbols[pind],
+                                 markersize=3,
+                                 label='%.1f GHz' % freq)                        
                 else:
-                    plt.plot(self.data[:, 0], ydata,
-                             linestyle=self.linestyles[lind],
-                             label='%.1f GHz' % freq)
+                    if azel in ('az', 'el'):
+                        plt.plot(self.data[:, 0], ydata,
+                                 linestyle=self.linestyles[lind],
+                                 label='%.1f GHz' % freq)
+                    else:
+                        diag = numpy.sqrt(self.data[:, 0]**2 + self.data[:, 1]**2)
+                        ind = numpy.where(self.data[:, 0] < 0)
+                        diag[ind] = -diag[ind]
+                        plt.plot(diag, ydata,
+                                 linestyle=self.linestyles[lind],
+                                 label='%.1f GHz' % freq)
+                        
         if xlim is None:
-            plt.xlim(self.cfg['azimuth']['xmin'], self.cfg['azimuth']['xmax'])
+            if azel == 'az':
+                plt.xlim(self.cfg['azimuth']['xmin'], self.cfg['azimuth']['xmax'])
+            elif azel == 'el':
+                plt.xlim(self.cfg['elevation']['ymin'], self.cfg['elevation']['ymax'])
+            elif azel == 'diag': 
+                diag = numpy.sqrt(self.data[:, 0]**2 + self.data[:, 1]**2)
+                ind = numpy.where(self.data[:, 0] < 0)
+                diag[ind] = -diag[ind]               
+                plt.xlim(diag[0], diag[-1])
         else:
             plt.xlim(xlim[0], xlim[1])
         if ylim is not None:
             plt.ylim(ylim[0], ylim[1])
-        plt.xlabel('Azimuth (deg)')
+        if azel == 'az':
+            plt.xlabel('Azimuth (deg)')
+        elif azel == 'el':
+            plt.xlabel('Elevation (deg)')
+        else:
+            plt.xlabel('Diagonal (deg)')
         if linear:
             plt.ylabel('Beam Voltage (linear)')
         else:
@@ -122,17 +158,17 @@ class BeamPlot(object):
             plt.savefig(self.plotfile)
 
     def plot_linear(self, frequencies=None, xlim=None,
-                    ylim=None, title=None):
+                    ylim=None, title=None, azel='az'):
         self._plot_data(frequencies=frequencies,
                         linear=True, xlim=xlim, ylim=ylim,
-                        title=title)
+                        title=title, azel=azel)
         
 
     def plot_log(self, frequencies=None, xlim=None,
-                    ylim=None, title=None):
+                    ylim=None, title=None, azel='az'):
         self._plot_data(frequencies=frequencies,
                         linear=False, xlim=xlim, ylim=ylim,
-                        title=title)
+                        title=title, azel=azel)
 
 
 class BeamPlotPhase(object):
