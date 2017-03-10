@@ -341,13 +341,18 @@ class BeamMap(object):
                     if adjust_boresight:
                         self.syn.set_power_level(self.rfpower[i])
                         logger.info("For Freq: %s GHz, adjusted power level to: %s dBm" % (freq, self.rfpower[i]))
-                    time.sleep(0.2)
+                    time.sleep(0.4)
                     vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
                     logger.info("Az: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, freq, vmean, vstd))
+                    #if vmean >= vstd:
+                    #    dt = numpy.sqrt(vmean**2-self.offset**2)
+                    #else:
+                    #    dt = numpy.nan
+                    dt = vmean
                     if self.nrdgs > 1:
-                        fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
+                        fp.write(",%.6g,%.6g" % (dt, vstd))
                     else:
-                        fp.write(",%.6g,%.6g" % (vmean-self.offset, 0.0))
+                        fp.write(",%.6g,%.6g" % (dt, 0.0))
                     plt.plot(az, vmean, self.plot_symbols[i])
                     plt.draw()
                 fp.write('\n')
@@ -383,10 +388,15 @@ class BeamMap(object):
                     time.sleep(0.2)
                     vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
                     logger.info("El: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (el, freq, vmean, vstd))
+                    #if vmean >= vstd:
+                    #    dt = numpy.sqrt(vmean**2-self.offset**2)
+                    #else:
+                    #    dt = numpy.nan
+                    dt = vmean
                     if self.nrdgs > 1:
-                        fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
+                        fp.write(",%.6g,%.6g" % (dt, vstd))
                     else:
-                        fp.write(",%.6g,%.6g" % (vmean-self.offset, 0.0))
+                        fp.write(",%.6g,%.6g" % (dt, 0.0))
                     plt.plot(el, vmean, self.plot_symbols[i])
                     plt.draw()
                 fp.write('\n')
@@ -407,15 +417,15 @@ class BeamMap(object):
         azimuths = []
         for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
                               self.azimuth.xinc):
-            if x > self.azimuth.xmax:
-                x = self.azimuth.xmax
+            #if x > self.azimuth.xmax:
+            #    x = self.azimuth.xmax
             azimuths.append(x)
         azimuths = numpy.array(azimuths)
         elevations = []
         for y in numpy.arange(self.elevation.ymin, self.elevation.ymax + self.elevation.yinc,
                               self.elevation.yinc):
-            if y > self.elevation.ymax:
-                y = self.elevation.ymax
+            #if y > self.elevation.ymax:
+            #    y = self.elevation.ymax
             elevations.append(y)
         elevations = numpy.array(elevations)
         wait = (abs(azimuths[0]-self.uni.pos_az)/self.azimuth.xslew_vel) + 1.0
@@ -460,10 +470,15 @@ class BeamMap(object):
                     time.sleep(0.2)
                     vmean, vstd = self.take_readings(nrdgs=self.nrdgs)
                     logger.info("Az: %.2f, El: %.2f, Freq: %.3f, Voltage: %.6g +/- %.6g" % (az, el, freq, vmean, vstd))
+                    #if vmean >= vstd:
+                    #    dt = numpy.sqrt(vmean**2-self.offset**2)
+                    #else:
+                    #    dt = numpy.nan
+                    dt = vmean
                     if self.nrdgs > 1:
-                        fp.write(",%.6g,%.6g" % (vmean-self.offset, vstd))
+                        fp.write(",%.6g,%.6g" % (dt, vstd))
                     else:
-                        fp.write(",%.6g,%.6g" % (vmean-self.offset, 0.0))
+                        fp.write(",%.6g,%.6g" % (dt, 0.0))
                     plt.plot(diag, vmean, self.plot_symbols[i])
                     plt.draw()
                 fp.write('\n')

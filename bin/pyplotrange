@@ -60,6 +60,12 @@ if __name__ == '__main__':
                       action="store", type="string",
                       dest="plotfile", default="beamplot.png",
                       help="Output plot file")
+
+    parser.add_option("-n", "--nooffset",
+                      action="store_true",
+                      dest="no_remove_offset", default=False,
+                      help="Do not remove the offset voltage")
+
     parser.add_option("-f", "--filename",
                       action="store", type="string",
                       dest="filename", 
@@ -90,10 +96,10 @@ if __name__ == '__main__':
                      grid=grid, plotfile=options.plotfile)
     if options.linear:
         bplot.plot_linear(frequencies, xlim=options.xlim, ylim=options.ylim,
-                          title=options.title, azel=options.azel)
+                          title=options.title, azel=options.azel, nooffset=options.no_remove_offset)
     else:
         bplot.plot_log(frequencies, xlim=options.xlim, ylim=options.ylim,
-                       title=options.title, azel=options.azel)
+                       title=options.title, azel=options.azel, nooffset=options.no_remove_offset)
     raw_input("Enter any key to quit > ")
     sys.exit(0)
 

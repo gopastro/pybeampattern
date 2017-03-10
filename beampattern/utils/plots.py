@@ -60,11 +60,16 @@ class BeamPlot(object):
             else:
                 break
         fp.close()
+        try:
+            offstr = re.findall('Voltage offset: (?P<offset>\d+\.\d+)', header)[0]
+            self.offset = float(offstr)
+        except:
+            self.offset = 0.0
         return header
     
     def _plot_data(self, frequencies=None, linear=True,
                    ylim=None, xlim=None, title=None, 
-                   azel='az'):
+                   azel='az', nooffset=False):
         print title
         plt.ion()
         if frequencies is None:
@@ -86,9 +91,16 @@ class BeamPlot(object):
                 lind = i % len(self.linestyles)
                 pind = i % len(self.plot_symbols)
                 if linear:
-                    ydata = self.data[:, find]
+                    if not nooffset:
+                        ydata = numpy.sqrt(self.data[:, find]**2 - self.offset**2)
+                    else:
+                        ydata = self.data[:, find]
                 else:
-                    arg = self.data[:, find]/self.data[:, find].max()
+                    if not nooffset:
+                        yd = numpy.sqrt(self.data[:, find]**2 - self.offset**2)
+                    else:
+                        yd = self.data[:, find]
+                    arg = yd/numpy.nanmax(yd)
                     ind = numpy.where(arg <= 0.0)
                     ydata = 10.0 * numpy.log10(arg)
                     ydata[ind] = numpy.nan
@@ -158,17 +170,17 @@ class BeamPlot(object):
             plt.savefig(self.plotfile)
 
     def plot_linear(self, frequencies=None, xlim=None,
-                    ylim=None, title=None, azel='az'):
+                    ylim=None, title=None, azel='az', nooffset=False):
         self._plot_data(frequencies=frequencies,
                         linear=True, xlim=xlim, ylim=ylim,
-                        title=title, azel=azel)
+                        title=title, azel=azel, nooffset=nooffset)
         
 
     def plot_log(self, frequencies=None, xlim=None,
-                    ylim=None, title=None, azel='az'):
+                    ylim=None, title=None, azel='az', nooffset=False):
         self._plot_data(frequencies=frequencies,
                         linear=False, xlim=xlim, ylim=ylim,
-                        title=title, azel=azel)
+                        title=title, azel=azel, nooffset=nooffset)
 
 
 class BeamPlotPhase(object):

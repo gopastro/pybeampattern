@@ -64,7 +64,7 @@ xmin = float(-180.0, 180.0, default=-90)
 # xmax: map end position in degrees
 xmax = float(-180.0, 180.0, default=90)
 # xinc: map step in degrees
-xinc = float(0.1, 180.0, default=1.0)
+xinc = float(-180.0, 180.0, default=1.0)
 # xmap_vel: map velocity in degrees/second
 xmap_vel = float(0.1, 30.0, default=2.0)
 # xslew_vel: slew velocity in degrees/second
@@ -78,7 +78,7 @@ ymin = float(-180.0, 180.0, default=-90)
 # ymax: map end position in degrees
 ymax = float(-180.0, 180.0, default=90)
 # yinc: map step in degrees
-yinc = float(0.1, 180.0, default=1.0)
+yinc = float(-180.0, 180.0, default=1.0)
 
 [synth]
 # This object contains configuration items specfic to

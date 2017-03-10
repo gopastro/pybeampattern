@@ -274,7 +274,8 @@ class AzimuthMap(object):
             hdr += "\n"
         return hdr
 
-    def make_map(self, adjust_boresight=False, measure_ac_offset=True):
+    def make_map(self, adjust_boresight=False, measure_ac_offset=True,
+                 all_offset=False):
         if measure_ac_offset:
             self.measure_offset()
         if adjust_boresight:
@@ -282,6 +283,8 @@ class AzimuthMap(object):
         self.uni.home(axis='X')
         time.sleep(10.0)
         azimuths = []
+        if all_offset:
+            self.syn.output_off()            
         for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
                               self.azimuth.xinc):
             if x > self.azimuth.xmax:
