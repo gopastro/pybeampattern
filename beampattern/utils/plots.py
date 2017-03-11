@@ -23,6 +23,7 @@ class BeamPlot(object):
         self.markers = markers
         self.grid = grid
         self.plotfile = plotfile
+        self.lined = dict()
         
     def _get_cfg_file(self):
         fp = open(self.filename, 'r')
@@ -66,12 +67,29 @@ class BeamPlot(object):
         except:
             self.offset = 0.0
         return header
+
+    def onpick(self, event):
+        # on the pick event, find the orig line corresponding to the
+        # legend proxy line, and toggle the visibility
+        legline = event.artist
+        origline = self.lined[legline]
+        vis = not origline.get_visible()
+        origline.set_visible(vis)
+        # Change the alpha on the line in the legend so we can see what lines
+        # have been toggled
+        if vis:
+            legline.set_alpha(1.0)
+        else:
+            legline.set_alpha(0.2)
+        self.fig.canvas.draw()
+    
     
     def _plot_data(self, frequencies=None, linear=True,
                    ylim=None, xlim=None, title=None, 
                    azel='az', nooffset=False):
         print title
         plt.ion()
+        self.fig, ax = plt.subplots()
         if frequencies is None:
             frequencies = self.cfg['synth']['freq']
             
@@ -82,6 +100,7 @@ class BeamPlot(object):
         #             find = self.cfg['synth']['freq'].index(freq)*2 + 1
         #             cmax = self.data[:, find].max()
         #             vmax = cmax if cmax > vmax else vmax
+        lines = []
         for i, freq in enumerate(frequencies):
             if freq in self.cfg['synth']['freq']:
                 if azel in ('az', 'el'):
@@ -106,64 +125,71 @@ class BeamPlot(object):
                     ydata[ind] = numpy.nan
                 if self.markers:
                     if azel in ('az', 'el'):
-                        plt.plot(self.data[:, 0], ydata,
-                                 linestyle=self.linestyles[lind],
-                                 marker=self.plot_symbols[pind],
-                                 markersize=3,
-                                 label='%.1f GHz' % freq)
+                        line, = ax.plot(self.data[:, 0], ydata,
+                                        linestyle=self.linestyles[lind],
+                                        marker=self.plot_symbols[pind],
+                                        markersize=3,
+                                        label='%.1f GHz' % freq)
                     else:
                         diag = numpy.sqrt(self.data[:, 0]**2 + self.data[:, 1]**2)
                         ind = numpy.where(self.data[:, 0] < 0)
                         diag[ind] = -diag[ind]
-                        plt.plot(diag, ydata,
-                                 linestyle=self.linestyles[lind],
-                                 marker=self.plot_symbols[pind],
-                                 markersize=3,
-                                 label='%.1f GHz' % freq)                        
+                        line, = ax.plot(diag, ydata,
+                                        linestyle=self.linestyles[lind],
+                                        marker=self.plot_symbols[pind],
+                                        markersize=3,
+                                        label='%.1f GHz' % freq)
+                    lines.append(line)
                 else:
                     if azel in ('az', 'el'):
-                        plt.plot(self.data[:, 0], ydata,
-                                 linestyle=self.linestyles[lind],
-                                 label='%.1f GHz' % freq)
+                        line, = ax.plot(self.data[:, 0], ydata,
+                                        linestyle=self.linestyles[lind],
+                                        label='%.1f GHz' % freq)
                     else:
                         diag = numpy.sqrt(self.data[:, 0]**2 + self.data[:, 1]**2)
                         ind = numpy.where(self.data[:, 0] < 0)
                         diag[ind] = -diag[ind]
-                        plt.plot(diag, ydata,
-                                 linestyle=self.linestyles[lind],
-                                 label='%.1f GHz' % freq)
-                        
+                        line, = ax.plot(diag, ydata,
+                                        linestyle=self.linestyles[lind],
+                                        label='%.1f GHz' % freq)
+                    lines.append(line)
         if xlim is None:
             if azel == 'az':
-                plt.xlim(self.cfg['azimuth']['xmin'], self.cfg['azimuth']['xmax'])
+                ax.set_xlim(self.cfg['azimuth']['xmin'], self.cfg['azimuth']['xmax'])
             elif azel == 'el':
-                plt.xlim(self.cfg['elevation']['ymin'], self.cfg['elevation']['ymax'])
+                ax.set_xlim(self.cfg['elevation']['ymin'], self.cfg['elevation']['ymax'])
             elif azel == 'diag': 
                 diag = numpy.sqrt(self.data[:, 0]**2 + self.data[:, 1]**2)
                 ind = numpy.where(self.data[:, 0] < 0)
                 diag[ind] = -diag[ind]               
-                plt.xlim(diag[0], diag[-1])
+                ax.set_xlim(diag[0], diag[-1])
         else:
-            plt.xlim(xlim[0], xlim[1])
+            ax.set_xlim(xlim[0], xlim[1])
         if ylim is not None:
-            plt.ylim(ylim[0], ylim[1])
+            ax.set_ylim(ylim[0], ylim[1])
         if azel == 'az':
-            plt.xlabel('Azimuth (deg)')
+            ax.set_xlabel('Azimuth (deg)')
         elif azel == 'el':
-            plt.xlabel('Elevation (deg)')
+            ax.set_xlabel('Elevation (deg)')
         else:
-            plt.xlabel('Diagonal (deg)')
+            ax.set_xlabel('Diagonal (deg)')
         if linear:
-            plt.ylabel('Beam Voltage (linear)')
+            ax.set_ylabel('Beam Voltage (linear)')
         else:
-            plt.ylabel('Beam Voltage (log)')
-        plt.legend(loc='best')
+            ax.set_ylabel('Beam Voltage (log)')
+        leg = ax.legend(loc='best', fancybox=True, shadow=True)
+        leg.get_frame().set_alpha(0.4)
         if title is None:
-            plt.title('%s; %s' % (self.cfg['general']['comment'], self.datetime_str))
+            ax.set_title('%s; %s' % (self.cfg['general']['comment'], self.datetime_str))
         else:
-            plt.title(title)
+            ax.set_title(title)
         if self.grid:
-            plt.grid(True)
+            ax.grid(True)
+        # Now connect the legends to lines
+        for legline, origline in zip(leg.get_lines(), lines):
+            legline.set_picker(5)  # 5 pts tolerance
+            self.lined[legline] = origline
+        self.fig.canvas.mpl_connect('pick_event', self.onpick)
         plt.draw()
         plt.show()
         if self.plotfile is not None:
