@@ -1,7 +1,7 @@
-from beampattern.prologixgpib.unidex11 import Unidex11
-from beampattern.prologixgpib.hp83620a import HP83620A
-from beampattern.prologixgpib.prologix_gpib import PrologixGPIB
-from beampattern.prologixgpib.vector_voltmeter import VectorVoltmeter
+from beampattern.prologix_gpib.unidex11 import Unidex11
+from beampattern.prologix_gpib.hp83620a import HP83620A
+from beampattern.prologix_gpib.prologix_gpib import PrologixGPIB
+from beampattern.prologix_gpib.vector_voltmeter import VectorVoltmeter
 from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, BeamPatternArgumentError
 from beampattern.logging import logger
 import matplotlib.pyplot as plt
