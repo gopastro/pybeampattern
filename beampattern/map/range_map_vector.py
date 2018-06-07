@@ -62,7 +62,9 @@ class AzimuthVectorMap(object):
         self.prologix = PrologixGPIB()
         self.vv = None
         self.syn = HP83620A(self.prologix)
-        self.freq_list = numpy.array(self.synthesizer.freq)/1.e9
+        logger.info("Synthesizer initialized")
+        self.freq_list = numpy.array(self.synthesizer.freq)*1.e9
+        print self.freq_list
         if self.devices.use_unidex:
             try:
                 self.uni = Unidex11(self.prologix)
@@ -77,12 +79,12 @@ class AzimuthVectorMap(object):
         if self.devices.use_vv:
             try:
                 self.vv = VectorVoltmeter(self.prologix)
-                logger.info("Vector network analyzer initialized")
+                logger.info("Vector voltmeter initialized")
                 self.average = self.vector_voltmeter.avg_value
                 time.sleep(0.5)
             except:
                 logger.error("Vector Voltmeter not available")
-                raise BeamPatternGeneralError("open_devices", "VNA not available")
+                raise BeamPatternGeneralError("open_devices", "Vector Voltmeter not available")
 
     def take_readings(self):
         if self.devices.use_vv:
@@ -98,8 +100,8 @@ class AzimuthVectorMap(object):
         hdr += "# Beammap Timestamp: %s\n" % self.datetime_str
         hdr += "# Configfile: %s\n" % self.cfgfile
         hdr += "# Comment: %s\n" % self.general.comment
-        hdr += "# use_unidex: %s; use_vna: %s\n" % \
-               (self.devices.use_unidex, self.devices.use_vna)
+        hdr += "# use_unidex: %s; use_vv: %s\n" % \
+               (self.devices.use_unidex, self.devices.use_vv)
         hdr += "# Map Azimuth Params: xmin: %.2f deg; xmax: %.2f deg; xinc: %.2f deg\n" % \
                (self.azimuth.xmin, self.azimuth.xmax, self.azimuth.xinc)
         hdr += "# Map Velocity: %.2f deg/s; Slew speed: %.2f deg/s\n" % \
@@ -128,7 +130,7 @@ class AzimuthVectorMap(object):
         plt.ion()
         plt.plot([self.azimuth.xmin, self.azimuth.xmax], [0, 0], 'r-')
         plt.xlim(self.azimuth.xmin, self.azimuth.xmax)
-        plt.ylim(-0.001, 0.007)
+        plt.ylim(-0.5, 6)
         plt.draw()
         for az in azimuths:
             wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 1.0
@@ -136,8 +138,8 @@ class AzimuthVectorMap(object):
             logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
             time.sleep(wait)
             fp.write("%.3f" % az)
-            data = self.take_readings()
-            for freq in self.freq_list:
+            #data = self.take_readings()
+            for i, freq in enumerate(self.freq_list):
                 self.syn.set_freq(freq)
                 time.sleep(0.020)
                 ratio, phase = self.vv.measure_transmission_single(self.average)

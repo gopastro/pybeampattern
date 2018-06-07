@@ -42,7 +42,7 @@ class VectorVoltmeter(object):
     def measure_transmission_single(self, average=3):
         self.write('SYST:FORM FP64')
         self.write("AVER:COUN %d" % average, initgpib=False)
-        str = self.ask('MEAD? TRAN', initgpib=False)
+        str = self.ask('MEAS? TRAN', initgpib=False)
         ratio = struct.unpack('>d', str[3:11])[0]
         phase = struct.unpack('>d', str[14:])[0]
         return ratio, phase
