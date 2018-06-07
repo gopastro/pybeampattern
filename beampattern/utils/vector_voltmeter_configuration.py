@@ -50,7 +50,7 @@ figsize = int_list(min=2, max=2, default=list(800, 600))
 # use the unidex11?
 use_unidex = boolean(default=True)
 # use vector network analyzer?
-use_vna = boolean(default=True)
+use_vv = boolean(default=True)
 
 [azimuth]
 #This object contains configuration items specific to maps
@@ -76,11 +76,15 @@ ymax = float(-180.0, 180.0, default=90)
 # yinc: map step in degrees
 yinc = float(0.1, 180.0, default=1.0)
 
+[synthesizer]
+# This object contains configuration items specific to 
+# setting frequencies in synth
+freq = float_list(min=1, max=100, default=list(11.7, 12.0, 12.2))
+
 [vector_voltmeter]
 # This object contains configuration items specfic to
 # frequency and frequency sweeps
 # freq is a list of floats
-freq = float_list(min=1, max=100, default=list(11.7, 12.0, 12.2))
 meas = string(max=10, default="TRAN")
 avg_value = integer(1, 4096, default=3)
 """
