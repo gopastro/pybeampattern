@@ -141,7 +141,7 @@ class AzimuthVectorMap(object):
                 self.syn.set_freq(freq)
                 time.sleep(0.020)
                 ratio, phase = self.vv.measure_transmission_single(self.average)
-                fp.write(",%.6g,%.6g" % (ratio, phase)
+                fp.write(",%.6g,%.6g" % (ratio, phase))
                 logger.info("Az: %.2f, Freq: %.3f, Ratio: %g; Phase: %g" % (az, freq/1e9, ratio, phase))
                 plt.plot(az, ratio, self.plot_symbols[i])
                 plt.draw()
