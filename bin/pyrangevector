@@ -7,7 +7,7 @@ import time
 import datetime
 import pylab
 
-from beampattern.utils.phase_configuration import ConfigurationVector
+from beampattern.utils.vector_voltmeter_configuration import ConfigurationVector
 from beampattern.logging import logger
 from beampattern.map.range_map_vector import AzimuthVectorMap
 logger.name = __name__
