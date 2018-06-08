@@ -141,7 +141,7 @@ class AzimuthVectorMap(object):
             #data = self.take_readings()
             for i, freq in enumerate(self.freq_list):
                 self.syn.set_freq(freq)
-                time.sleep(0.020)
+                time.sleep(0.050)
                 ratio, phase = self.vv.measure_transmission_single(self.average)
                 fp.write(",%.6g,%.6g" % (ratio, phase))
                 logger.info("Az: %.2f, Freq: %.3f, Ratio: %g; Phase: %g" % (az, freq/1e9, ratio, phase))
