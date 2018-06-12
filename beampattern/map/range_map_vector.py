@@ -106,7 +106,10 @@ class AzimuthVectorMap(object):
                (self.azimuth.xmin, self.azimuth.xmax, self.azimuth.xinc)
         hdr += "# Map Velocity: %.2f deg/s; Slew speed: %.2f deg/s\n" % \
                (self.azimuth.xmap_vel, self.azimuth.xslew_vel)
-        hdr += "# Freq_list: %s\n" % (self.freq_list/1e9)
+        freqtxt = ''
+        for freq in self.freq_list:
+            freqtxt += '%.2f ' % (f/1e9)
+        hdr += "# Freq_list: %s\n" % freqtxt
         return hdr
 
     def make_map(self):
