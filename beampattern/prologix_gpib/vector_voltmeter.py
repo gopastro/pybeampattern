@@ -2,6 +2,7 @@ import socket
 import time
 import struct
 from prologix_gpib import PrologixGPIB
+import numpy
 
 class VectorVoltmeter(object):
     def __init__(self, prologix, gpib_address=15):
@@ -46,6 +47,17 @@ class VectorVoltmeter(object):
         ratio = struct.unpack('>d', str[3:11])[0]
         phase = struct.unpack('>d', str[14:])[0]
         return ratio, phase
+
+    def measure_vector_averaged_transmission(self, average=10):
+        self.write('SYST:FORM FP64')
+        cmplx = numpy.zeros(average, dtype='complex')
+        for i in range(average):
+            self.write("AVER:COUN 1", initgpib=False)
+            str = self.ask('MEAS? TRAN', initgpib=False)
+            ratio = struct.unpack('>d', str[3:11])[0]
+            phase = struct.unpack('>d', str[14:])[0]
+            cmplx[i] = ratio * numpy.exp(1j* numpy.radians(phase))
+        return cmplx
     
     def setup(self):
         self.prologix.set_gpib_address(self.gpib_address)        
