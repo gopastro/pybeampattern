@@ -450,11 +450,11 @@ class BeamPlotVector(object):
                              linestyle=self.linestyles[lind],
                              marker=self.plot_symbols[pind],
                              markersize=3,
-                             label='%.1f GHz' % freq)
+                             label='%.2f GHz' % freq)
                 else:
                     plt.plot(self.data[:, 0], ydata,
                              linestyle=self.linestyles[lind],
-                             label='%.1f GHz' % freq)
+                             label='%.2f GHz' % freq)
         if options.xlimamp is None:
             plt.xlim(self.cfg['azimuth']['xmin'], self.cfg['azimuth']['xmax'])
         else:
@@ -499,11 +499,11 @@ class BeamPlotVector(object):
                              linestyle=self.linestyles[lind],
                              marker=self.plot_symbols[pind],
                              markersize=3,
-                             label='%.1f GHz' % freq)
+                             label='%.2f GHz' % freq)
                 else:
                     plt.plot(self.data[:, 0], numpy.degrees(numpy.angle(cdata)),
                              linestyle=self.linestyles[lind],
-                             label='%.1f GHz' % freq)
+                             label='%.2f GHz' % freq)
         if options.xlimphase is None:
             plt.xlim(self.cfg['azimuth']['xmin'], self.cfg['azimuth']['xmax'])
         else:

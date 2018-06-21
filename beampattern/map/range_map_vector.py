@@ -108,7 +108,7 @@ class AzimuthVectorMap(object):
                (self.azimuth.xmap_vel, self.azimuth.xslew_vel)
         freqtxt = ''
         for freq in self.freq_list:
-            freqtxt += '%.2f ' % (f/1e9)
+            freqtxt += '%.2f ' % (freq/1e9)
         hdr += "# Freq_list: %s\n" % freqtxt
         return hdr
 
