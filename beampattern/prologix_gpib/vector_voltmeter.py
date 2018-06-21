@@ -41,14 +41,14 @@ class VectorVoltmeter(object):
         return meas
 
     def measure_transmission_single(self, average=3):
-        self.write('SYST:FORM FP64')
+        self.write('SYST:FORM FP64', initgpib=False)
         self.write("AVER:COUN %d" % average, initgpib=False)
         str = self.ask('MEAS? TRAN', initgpib=False)
         ratio = struct.unpack('>d', str[3:11])[0]
         phase = struct.unpack('>d', str[14:])[0]
         return ratio, phase
 
-    def measure_vector_averaged_transmission(self, average=10):
+    def _measure_vector_averaged_transmission(self, average=10):
         self.write('SYST:FORM FP64')
         cmplx = numpy.zeros(average, dtype='complex')
         for i in range(average):
@@ -57,7 +57,14 @@ class VectorVoltmeter(object):
             ratio = struct.unpack('>d', str[3:11])[0]
             phase = struct.unpack('>d', str[14:])[0]
             cmplx[i] = ratio * numpy.exp(1j* numpy.radians(phase))
+            time.sleep(0.010)
         return cmplx
+
+    def measure_vector_averaged_transmission(self, average=10):
+        cmplx = self._measure_vector_averaged_transmission(average=average)
+        ratio = numpy.abs(cmplx.mean())
+        phase = numpy.degrees(numpy.angle(cmplx.mean()))
+        return ratio, phase
     
     def setup(self):
         self.prologix.set_gpib_address(self.gpib_address)        
