@@ -157,4 +157,25 @@ class AzimuthVectorMap(object):
         logger.info("Map Completed, Saving data file %s" % self.filename)
         fp.close()
 
+    def take_zero_offsets(self):
+        self.uni.home(axis='X')
+        time.sleep(5.0)
+        fp = open(self.filename, 'w')
+        header = self.make_header()
+        fp.write(header)
+        for i, freq in enumerate(self.freq_list):
+            self.syn.set_freq(freq)
+            time.sleep(0.050)
+            ratio, phase = self.vv.measure_transmission_single(self.average)
+            fp.write(",%.6g,%.6g" % (ratio, phase))
+            logger.info("Freq: %.3f, Ratio: %g; Phase: %g" % (freq/1e9, ratio, phase))
+            #plt.plot(az, ratio, self.plot_symbols[i])
+            #plt.draw()
+            fp.write('\n')
+                         
+        #time.sleep(10.0)
+        #self.uni.home(axis='X')
+        logger.info("Offset measurement Completed, Saving data file %s" % self.filename)
+        fp.close()
+        
                 
