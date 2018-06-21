@@ -19,6 +19,10 @@ if __name__ == '__main__':
                       action="store", type="string",
                       dest="configfile", default="beammap.cfg",
                       help="Input Configuration file for beammap")
+    parser.add_option("-o", "--offset",
+                      action="store_true", dest="offset",
+                      default=False,
+                      help="Take Zero offset measurements")
     parser.add_option("-f", "--filename",
                       action="store", type="string",
                       dest="filename", default="beamscan.txt",
@@ -44,7 +48,10 @@ if __name__ == '__main__':
 
     amap = AzimuthVectorMap(cfg.cfg, filename, datetime_str, cfgfile)
     amap.open_devices()
-    amap.make_map()
+    if options.offset:
+        amap.take_zero_offsets()
+    else:
+        amap.make_map()
     raw_input("Enter any key to quit > ")
     sys.exit(0)
 
