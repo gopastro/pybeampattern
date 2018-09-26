@@ -27,7 +27,7 @@ class AzimuthVectorMap(object):
     def __init__(self, cfg, filename, datetime_str, cfgfile):
         self.plot_symbols = ['o', 's', 'v', '^', '<', '>',
                              '1', '2', '3', '4', 'p', '*',
-                             'h', 'H', '+', 'x', 'D', 'd']
+                             'h', 'H', '+', 'x', 'D', 'd', '|', '_'] * 5 # lots of symbols
                              
         self.cfg = cfg
         self._get_config_parameters()
