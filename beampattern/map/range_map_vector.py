@@ -2,6 +2,7 @@ from beampattern.prologix_gpib.unidex11 import Unidex11
 from beampattern.prologix_gpib.hp83620a import HP83620A
 from beampattern.prologix_gpib.prologix_gpib import PrologixGPIB
 from beampattern.prologix_gpib.vector_voltmeter import VectorVoltmeter
+from beampattern.labjack.labjack_t7 import LabJackT7
 from beampattern.utils.beampattern_exceptions import BeamPatternGeneralError, BeamPatternArgumentError
 from beampattern.logging import logger
 import matplotlib.pyplot as plt
@@ -24,11 +25,11 @@ class AzimuthVectorMap(object):
     write output data to and a datetime_str, this class
     check for correct configuration and does a map
     """
-    def __init__(self, cfg, filename, datetime_str, cfgfile):
+    def __init__(self, cfg, filename, datetime_str, cfgfile,
+                 digital=False):
         self.plot_symbols = ['o', 's', 'v', '^', '<', '>',
                              '1', '2', '3', '4', 'p', '*',
                              'h', 'H', '+', 'x', 'D', 'd', '|', '_'] * 5 # lots of symbols
-                             
         self.cfg = cfg
         self._get_config_parameters()
         self.filename = filename
@@ -41,7 +42,10 @@ class AzimuthVectorMap(object):
         if not self.check_map_azimuth_parameters():
             logger.error("Map Parameters Malformed")
             raise BeamPatternGeneralError("AzimuthMap", "Map Parameters Malformed")
-
+        self.digital = digital
+        if self.digital:
+            self.labjack = LabJackT7()
+            
     def _get_config_parameters(self):
         for key, val in self.cfg.items():
             setattr(self, key, ConfigObj())
@@ -112,6 +116,78 @@ class AzimuthVectorMap(object):
         hdr += "# Freq_list: %s\n" % freqtxt
         return hdr
 
+    def make_digital_header(self):
+        hdr = ""
+        hdr += "# Beammap Timestamp: %s\n" % self.datetime_str
+        hdr += "# Configfile: %s\n" % self.cfgfile
+        hdr += "# Comment: %s\n" % self.general.comment
+        hdr += "# use_unidex: %s; use_vv: %s\n" % \
+               (self.devices.use_unidex, self.devices.use_vv)
+        hdr += "# Map Azimuth Params: xmin: %.2f deg; xmax: %.2f deg; xinc: %.2f deg\n" % \
+               (self.azimuth.xmin, self.azimuth.xmax, self.azimuth.xinc)
+        hdr += "# Map Velocity: %.2f deg/s; Slew speed: %.2f deg/s\n" % \
+               (self.azimuth.xmap_vel, self.azimuth.xslew_vel)
+        freqtxt = ''
+        for freq in self.freq_list:
+            freqtxt += '%.2f ' % (freq/1e9)
+        hdr += "# Freq_list: %s\n" % freqtxt
+        return hdr
+    
+    def make_digital_map(self):
+        """
+        Same as make_map, but in this case
+        goes through a sequence of all 8 digital inputs and pulls it low and takes 
+        measurement at each frequency
+        """
+        self.uni.home(axis='X')
+        time.sleep(10.0)
+        azimuths = []
+        for x in numpy.arange(self.azimuth.xmin, self.azimuth.xmax + self.azimuth.xinc,
+                              self.azimuth.xinc):
+            if x > self.azimuth.xmax:
+                x = self.azimuth.xmax
+            azimuths.append(x)
+        azimuths = numpy.array(azimuths)
+        wait = (abs(azimuths[0]-self.uni.pos_az)/self.azimuth.xslew_vel) + 1.0
+        self.uni.set_azimuth(azimuths[0], self.azimuth.xslew_vel)
+        logger.info("Sleeping for %.2f seconds while stage gets to start of map" % wait)
+        time.sleep(wait)
+
+        fp = open(self.filename, 'w')
+        header = self.make_digital_header()
+        fp.write(header)
+        plt.ion()
+        plt.plot([self.azimuth.xmin, self.azimuth.xmax], [0, 0], 'r-')
+        plt.xlim(self.azimuth.xmin, self.azimuth.xmax)
+        plt.ylim(-0.5, 6)
+        plt.draw()
+        for az in azimuths:
+            wait = (abs(az-self.uni.pos_az)/self.azimuth.xmap_vel) + 1.0
+            self.uni.set_azimuth(az, self.azimuth.xmap_vel)
+            logger.info("Sleeping for %.2f seconds while stage gets to %.1f degrees" % (wait, az))
+            time.sleep(wait)
+            fp.write("%.3f" % az)
+            #data = self.take_readings()
+            for i, freq in enumerate(self.freq_list):
+                self.syn.set_freq(freq)
+                for dig_channel in range(8):
+                    self.labjack.digital_output(dig_channel, 1)
+                    time.sleep(0.050)
+                for dig_channel in range(8):
+                    self.labjack.digital_output(dig_channel, 0)
+                    time.sleep(0.050)
+                    ratio, phase = self.vv.measure_vector_averaged_transmission(self.average)
+                    fp.write(",%.6g,%.6g" % (ratio, phase))
+                    logger.info("Az: %.2f, Freq: %.3f, Ratio: %g; Phase: %g" % (az, freq/1e9, ratio, phase))
+                    plt.plot(az, ratio, self.plot_symbols[i])
+                    plt.draw()
+            fp.write('\n')
+                         
+        time.sleep(10.0)
+        self.uni.home(axis='X')
+        logger.info("Map Completed, Saving data file %s" % self.filename)
+        fp.close()
+
     def make_map(self):
         self.uni.home(axis='X')
         time.sleep(10.0)
@@ -156,7 +232,7 @@ class AzimuthVectorMap(object):
         self.uni.home(axis='X')
         logger.info("Map Completed, Saving data file %s" % self.filename)
         fp.close()
-
+        
     def take_zero_offsets(self):
         #self.uni.home(axis='X')
         #time.sleep(5.0)
