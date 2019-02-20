@@ -12,5 +12,5 @@ setup(
     author_email = "gopal@astro.umass.edu",
     packages = find_packages(),
     setup_requires=['nose', 'sphinx'],
-    scripts = ['bin/pyrange', 'bin/pyplotrange', 'bin/pyrangephase', 'bin/pyplotrangephase', 'bin/pycross_scan', 'bin/pydiagonal_scan', 'bin/pyrangevector', 'bin/pyplotrangevector']
+    scripts = ['bin/pyrange', 'bin/pyplotrange', 'bin/pyrangephase', 'bin/pyplotrangephase', 'bin/pycross_scan', 'bin/pydiagonal_scan', 'bin/pyrangevector', 'bin/pyplotrangevector', 'bin/pyrangvectordigital']
     )
