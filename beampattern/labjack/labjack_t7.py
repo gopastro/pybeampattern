@@ -4,7 +4,7 @@ from beampattern.utils.beampattern_exceptions import BeamPatternArgumentError
 class LabJackT7(object):
     def __init__(self, debug=True):
         self.handle = ljm.openS("ANY", "ANY", "ANY")
-        self.info = ljm.getHandleInfo(handle)
+        info = ljm.getHandleInfo(self.handle)
         if debug:
             print("Opened a LabJack with Device type: %i, Connection type: %i,\n"
                   "Serial number: %i, IP address: %s, Port: %i,\nMax bytes per MB: %i" %
