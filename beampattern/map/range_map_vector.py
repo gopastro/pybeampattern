@@ -171,9 +171,10 @@ class AzimuthVectorMap(object):
             for i, freq in enumerate(self.freq_list):
                 self.syn.set_freq(freq)
                 for dig_channel in range(8):
-                    self.labjack.digital_output(dig_channel, 1)
-                    time.sleep(0.050)
-                for dig_channel in range(8):
+                    for dig in range(8):
+                        if dig != dig_channel:
+                            self.labjack.digital_output(dig, 1)
+                            time.sleep(0.050)
                     self.labjack.digital_output(dig_channel, 0)
                     time.sleep(0.050)
                     ratio, phase = self.vv.measure_vector_averaged_transmission(self.average)
